@@ -27,7 +27,7 @@
   const state = {
     date: 'all',
     list: 'all',
-    label: null,
+    label: 'all',
     q: '',
     col: 260,
     gx: 16,
@@ -79,7 +79,7 @@
       allLists = lists || [];
       processTrelloData(lists, cards);
       populateListDropdown();
-      renderChips();
+      populateLabelDropdown();
       syncSettings();
       render();
     }).catch(function (err) {
@@ -97,9 +97,10 @@
     (cards || []).forEach(c => {
       const days = getDaysAgo(c.dateLastActivity);
       
-      // Determine primary label
+      // Determine primary label and all card labels
       let primaryLabel = 'General';
       let primaryColor = LABEL_COLORS.default;
+      const cardLabelsList = [];
 
       if (c.labels && c.labels.length > 0) {
         const lb = c.labels[0];
@@ -109,6 +110,7 @@
         c.labels.forEach(l => {
           const name = l.name && l.name.trim().length > 0 ? l.name : (l.color ? capitalize(l.color) : 'Label');
           availableLabels[name] = { c: LABEL_COLORS[l.color] || LABEL_COLORS.default };
+          cardLabelsList.push(name);
         });
       }
 
@@ -123,6 +125,7 @@
             listId: c.idList,
             listName: listMap[c.idList] || 'List',
             l: primaryLabel,
+            labels: cardLabelsList,
             color: primaryColor,
             d: days,
             date: att.date || c.dateLastActivity
@@ -138,6 +141,7 @@
           listId: c.idList,
           listName: listMap[c.idList] || 'List',
           l: primaryLabel,
+          labels: cardLabelsList,
           color: primaryColor,
           d: days,
           date: c.dateLastActivity
@@ -171,20 +175,32 @@
     $('listSelect').innerHTML = html;
   }
 
-  function renderChips() {
-    let html = '';
-    Object.keys(availableLabels).forEach(function (k) {
-      const isPressed = state.label === k;
-      html += `<button class="chip" data-l="${esc(k)}" aria-pressed="${isPressed}">
-        <span class="dot" style="--c:${availableLabels[k].c}"></span>${esc(k)}
-      </button>`;
+  function populateLabelDropdown() {
+    const labelCounts = {};
+    allBoardItems.forEach(it => {
+      if (it.labels && it.labels.length > 0) {
+        it.labels.forEach(lb => {
+          labelCounts[lb] = (labelCounts[lb] || 0) + 1;
+        });
+      } else if (it.l) {
+        labelCounts[it.l] = (labelCounts[it.l] || 0) + 1;
+      }
     });
-    $('labelChips').innerHTML = html;
+
+    let html = '<option value="all">All labels</option>';
+    Object.keys(availableLabels).forEach(k => {
+      const cnt = labelCounts[k] || 0;
+      html += `<option value="${esc(k)}" ${state.label === k ? 'selected' : ''}>${esc(k)} (${cnt})</option>`;
+    });
+    $('labelSelect').innerHTML = html;
   }
 
   function match(it) {
     if (state.list !== 'all' && it.listId !== state.list) return false;
-    if (state.label && it.l !== state.label) return false;
+    if (state.label && state.label !== 'all') {
+      const hasLabel = (it.labels && it.labels.includes(state.label)) || it.l === state.label;
+      if (!hasLabel) return false;
+    }
     if (state.date === 'today' && it.d > 0) return false;
     if (state.date === 'week' && it.d > 7) return false;
     if (state.date === 'month' && it.d > 30) return false;
@@ -195,7 +211,7 @@
 
   function render() {
     visibleItems = allBoardItems.filter(match);
-    const isFiltered = state.date !== 'all' || state.list !== 'all' || state.label || state.q.trim();
+    const isFiltered = state.date !== 'all' || state.list !== 'all' || (state.label && state.label !== 'all') || state.q.trim();
     $('reset').hidden = !isFiltered;
     $('count').innerHTML = `<b>${visibleItems.length}</b> of ${allBoardItems.length} images`;
 
@@ -211,7 +227,7 @@
               </svg>
             </div>
             <h2>${noBoard ? 'No images on this board yet' : 'No images match these filters'}</h2>
-            <p>${noBoard ? 'Attach an image to any card and it will show up here.' : 'Try a wider date range or clear your label filter.'}</p>
+            <p>${noBoard ? 'Attach an image to any card and it will show up here.' : 'Try clearing your list or label filter.'}</p>
             <div class="empty-actions">
               ${noBoard ? '<button class="btn primary" data-act="attach">Attach image</button>' : '<button class="btn primary" data-act="reset">Clear filters</button>'}
             </div>
@@ -292,12 +308,12 @@
   function resetFilters() {
     state.date = 'all';
     state.list = 'all';
-    state.label = null;
+    state.label = 'all';
     state.q = '';
     $('q').value = '';
     $('listSelect').value = 'all';
+    $('labelSelect').value = 'all';
     setSeg('dateSeg', 'all');
-    renderChips();
     render();
   }
 
@@ -307,19 +323,16 @@
     render();
   });
 
+  $('labelSelect').addEventListener('change', function (e) {
+    state.label = e.target.value;
+    render();
+  });
+
   $('dateSeg').addEventListener('click', function (e) {
     const b = e.target.closest('button');
     if (!b) return;
     state.date = b.dataset.v;
     setSeg('dateSeg', state.date);
-    render();
-  });
-
-  $('labelChips').addEventListener('click', function (e) {
-    const b = e.target.closest('.chip');
-    if (!b) return;
-    state.label = state.label === b.dataset.l ? null : b.dataset.l;
-    renderChips();
     render();
   });
 
@@ -355,11 +368,12 @@
           card: 'New Upload',
           listName: 'Attachments',
           l: 'Upload',
+          labels: ['Upload'],
           color: '#339af0',
           d: 0
         });
         availableLabels['Upload'] = { c: '#339af0' };
-        renderChips();
+        populateLabelDropdown();
         render();
       };
       reader.readAsDataURL(file);
@@ -426,12 +440,12 @@
 
   function getMockItems() {
     return [
-      { f: 'hero-banner-v3.png', card: 'Landing page refresh', l: 'Design', d: 0, url: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=800&auto=format&fit=crop&q=80', color: '#8f7ee7' },
-      { f: 'checkout-error.png', card: 'Fix payment timeout', l: 'Bug', d: 1, url: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&auto=format&fit=crop&q=80', color: '#f5655a' },
-      { f: 'campaign-poster.jpg', card: 'Diwali campaign', l: 'Marketing', d: 2, url: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=80', color: '#e5a21a' },
-      { f: 'api-diagram.png', card: 'API reference update', l: 'Docs', d: 3, url: 'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=800&auto=format&fit=crop&q=80', color: '#2ab38a' },
-      { f: 'onboarding-flow.png', card: 'Onboarding redesign', l: 'Design', d: 4, url: 'https://images.unsplash.com/photo-1581291518857-4e27b48ff24e?w=800&auto=format&fit=crop&q=80', color: '#8f7ee7' },
-      { f: 'social-card.jpg', card: 'Launch announcement', l: 'Marketing', d: 8, url: 'https://images.unsplash.com/photo-1557683316-973673baf926?w=800&auto=format&fit=crop&q=80', color: '#e5a21a' }
+      { f: 'hero-banner-v3.png', card: 'Landing page refresh', l: 'Design', labels: ['Design'], d: 0, url: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=800&auto=format&fit=crop&q=80', color: '#8f7ee7' },
+      { f: 'checkout-error.png', card: 'Fix payment timeout', l: 'Bug', labels: ['Bug'], d: 1, url: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&auto=format&fit=crop&q=80', color: '#f5655a' },
+      { f: 'campaign-poster.jpg', card: 'Diwali campaign', l: 'Marketing', labels: ['Marketing'], d: 2, url: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=80', color: '#e5a21a' },
+      { f: 'api-diagram.png', card: 'API reference update', l: 'Docs', labels: ['Docs'], d: 3, url: 'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=800&auto=format&fit=crop&q=80', color: '#2ab38a' },
+      { f: 'onboarding-flow.png', card: 'Onboarding redesign', l: 'Design', labels: ['Design'], d: 4, url: 'https://images.unsplash.com/photo-1581291518857-4e27b48ff24e?w=800&auto=format&fit=crop&q=80', color: '#8f7ee7' },
+      { f: 'social-card.jpg', card: 'Launch announcement', l: 'Marketing', labels: ['Marketing'], d: 8, url: 'https://images.unsplash.com/photo-1557683316-973673baf926?w=800&auto=format&fit=crop&q=80', color: '#e5a21a' }
     ];
   }
 })();

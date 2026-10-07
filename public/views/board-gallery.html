@@ -41,10 +41,17 @@
 
     <!-- Filter Toolbar -->
     <div class="bar">
-      <!-- Lists Segment / Dropdown -->
+      <!-- Lists Dropdown -->
       <select id="listSelect" class="chip-select" aria-label="Filter by list">
         <option value="all">All lists</option>
       </select>
+
+      <!-- Labels Dropdown -->
+      <select id="labelSelect" class="chip-select" aria-label="Filter by label">
+        <option value="all">All labels</option>
+      </select>
+
+      <div class="divider"></div>
 
       <!-- Date Range Filter -->
       <div class="seg" role="radiogroup" aria-label="Date range" id="dateSeg">
@@ -53,10 +60,7 @@
         <button role="radio" aria-checked="false" data-v="week">This week</button>
         <button role="radio" aria-checked="false" data-v="month">This month</button>
       </div>
-      <div class="divider"></div>
-      
-      <!-- Label Filter Chips -->
-      <div class="chips" id="labelChips" aria-label="Filter by label"></div>
+
       <button class="reset" id="reset" hidden>Clear filters</button>
       <div class="spacer"></div>
       <span class="count" id="count"></span>
