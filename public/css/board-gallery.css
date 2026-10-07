@@ -135,21 +135,22 @@ button {
 
 .titles h1 {
   margin: 0;
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 700;
-  color: var(--text-strong);
+  color: #ffffff !important;
   letter-spacing: -0.01em;
 }
 
 .titles p {
   margin: 0;
-  color: var(--muted);
+  color: #9fadbc;
   font-size: 12px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 280px;
 }
+
 
 .spacer {
   flex: 1;
