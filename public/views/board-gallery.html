@@ -9,188 +9,177 @@
   <script src="https://p.trellocdn.com/power-up.min.js"></script>
 </head>
 <body>
-  <!-- Top Navigation Bar -->
-  <header class="gv-top-navbar">
-    <div class="gv-brand-group">
-      <div class="gv-logo-badge">GV</div>
-      <div class="gv-brand-title">Gallery Viewer</div>
-      <span class="gv-board-title" id="gv-board-name">| Design Team Board</span>
-      <span class="gv-active-pill">POWER-UP ACTIVE</span>
-    </div>
-
-    <div class="gv-nav-controls">
-      <!-- View Mode Toggle -->
-      <div class="gv-view-toggle">
-        <button id="btn-view-gallery" class="gv-view-btn active">
-          <span>⊞</span> Gallery View
-        </button>
-        <button id="btn-view-board" class="gv-view-btn">
-          <span>⑊</span> Board View
-        </button>
+  <div class="gv-app-container">
+    <!-- Top Navigation Bar -->
+    <header class="gv-top-navbar">
+      <div class="gv-brand-group">
+        <div class="gv-logo-badge">GV</div>
+        <div class="gv-brand-title">Gallery Viewer</div>
+        <span class="gv-board-title" id="gv-board-name">| Loading board...</span>
+        <span class="gv-active-pill">POWER-UP ACTIVE</span>
       </div>
 
-      <!-- Live Search -->
-      <div class="gv-search-box">
-        <span class="gv-search-icon">🔍</span>
-        <input type="text" id="gv-search-input" placeholder="Search images or cards..." />
-      </div>
-
-      <!-- Action Buttons -->
-      <button id="btn-attach-image" class="gv-btn-primary">
-        <span>+</span> Attach Image
-      </button>
-      <button id="btn-open-settings" class="gv-btn-ghost">
-        <span>⚙</span> Settings
-      </button>
-      <input type="file" id="gv-file-input" accept="image/*" style="display: none;" />
-    </div>
-  </header>
-
-  <!-- Filter Bar -->
-  <section class="gv-filter-bar">
-    <div class="gv-filter-left">
-      <span class="gv-filter-label">FILTER BY:</span>
-      <select id="gv-filter-list" class="gv-select">
-        <option value="ALL">All Lists (0)</option>
-      </select>
-      <select id="gv-filter-label" class="gv-select">
-        <option value="ALL">All Labels</option>
-      </select>
-    </div>
-    <div class="gv-filter-right">
-      Showing <strong id="gv-showing-count">0</strong> attachments
-    </div>
-  </section>
-
-  <!-- Layout Summary Strip -->
-  <section class="gv-summary-strip">
-    <div class="gv-summary-items">
-      <span id="gv-stat-count">0 images</span>
-      <span class="gv-summary-dot">·</span>
-      <span>Col Width: <strong id="gv-stat-col" class="gv-summary-val">280px</strong></span>
-      <span class="gv-summary-dot">·</span>
-      <span>Gap: <span id="gv-stat-gap-h" class="gv-highlight-green">16px</span> H / <span id="gv-stat-gap-v" class="gv-highlight-yellow">16px</span> V</span>
-      <span class="gv-summary-dot">·</span>
-      <span>Title: <strong id="gv-stat-title-src" class="gv-summary-val">Attachment File</strong></span>
-      <span class="gv-summary-dot">·</span>
-      <span>Mode: <strong id="gv-stat-visibility-mode" class="gv-summary-val">Always Visible</strong></span>
-    </div>
-    <button id="btn-adjust-settings" class="gv-btn-adjust">
-      <span>⚙</span> Adjust Settings (*)
-    </button>
-  </section>
-
-  <!-- Main Scrollable Gallery Area -->
-  <main class="gv-main-area">
-    <div class="gv-gallery-scroll-container">
-      <div id="gv-cards-grid" class="gv-cards-grid">
-        <!-- Cards injected dynamically -->
-      </div>
-
-      <!-- Empty State -->
-      <div id="gv-empty-state" class="gv-empty-state" style="display: none;">
-        <svg width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
-          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-          <circle cx="8.5" cy="8.5" r="1.5"></circle>
-          <polyline points="21 15 16 10 5 21"></polyline>
-        </svg>
-        <p>No matching image attachments found on this board.</p>
-      </div>
-    </div>
-
-    <!-- Slide-Out Settings Panel -->
-    <aside id="gv-settings-drawer" class="gv-settings-drawer">
-      <header class="gv-drawer-header">
-        <div class="gv-drawer-title-group">
-          <div class="gv-drawer-icon">🎛️</div>
-          <div>
-            <div class="gv-drawer-title">Gallery Settings</div>
-            <div class="gv-drawer-subtitle">Customize layout, spacing & labels</div>
-          </div>
-        </div>
-        <button id="btn-close-drawer" class="gv-btn-close-drawer">✕</button>
-      </header>
-
-      <div class="gv-drawer-body">
-        <!-- Section 1: Column Width -->
-        <div class="gv-drawer-section">
-          <div class="gv-section-header">
-            <span>▤ COLUMN WIDTH</span>
-            <span id="drawer-val-col-width" class="gv-badge-val">280 px</span>
-          </div>
-          <input type="range" id="drawer-slider-col-width" class="gv-range-slider" min="180" max="480" step="10" value="280" />
-          <div class="gv-preset-grid">
-            <button class="gv-preset-btn" data-col="200">Compact</button>
-            <button class="gv-preset-btn active" data-col="280">Normal</button>
-            <button class="gv-preset-btn" data-col="360">Large</button>
-            <button class="gv-preset-btn" data-col="440">Wide</button>
-          </div>
+      <div class="gv-nav-controls">
+        <!-- Live Search -->
+        <div class="gv-search-box">
+          <span class="gv-search-icon">🔍</span>
+          <input type="text" id="gv-search-input" placeholder="Search images or cards..." />
         </div>
 
-        <!-- Section 2: Image Spacing -->
-        <div class="gv-drawer-section">
-          <div class="gv-section-header">
-            <span>IMAGE SPACING (GAP)</span>
-            <div style="font-size: 11px; font-weight: normal; text-transform: none;">
-              <span id="btn-gap-flush" style="cursor: pointer; color: var(--accent-cyan);">Flush (0)</span> · 
-              <span id="btn-gap-default" style="cursor: pointer; color: var(--accent-cyan);">Default (16)</span>
+        <!-- Action Buttons -->
+        <button id="btn-attach-image" class="gv-btn-primary" title="Attach an image to this board">
+          <span>+</span> Attach Image
+        </button>
+        <button id="btn-open-settings" class="gv-btn-ghost" title="Customize Layout & Settings">
+          <span>⚙</span> Settings
+        </button>
+        <input type="file" id="gv-file-input" accept="image/*" style="display: none;" />
+      </div>
+    </header>
+
+    <!-- Filter Bar -->
+    <section class="gv-filter-bar">
+      <div class="gv-filter-left">
+        <span class="gv-filter-label">FILTER BY:</span>
+        <select id="gv-filter-list" class="gv-select">
+          <option value="ALL">All Lists</option>
+        </select>
+        <select id="gv-filter-label" class="gv-select">
+          <option value="ALL">All Labels</option>
+        </select>
+      </div>
+      <div class="gv-filter-right">
+        Showing <strong id="gv-showing-count">0</strong> attachments
+      </div>
+    </section>
+
+    <!-- Layout Summary Strip -->
+    <section class="gv-summary-strip">
+      <div class="gv-summary-items">
+        <span id="gv-stat-count">0 images</span>
+        <span class="gv-summary-dot">·</span>
+        <span>Col Width: <strong id="gv-stat-col" class="gv-summary-val">280px</strong></span>
+        <span class="gv-summary-dot">·</span>
+        <span>Gap: <span id="gv-stat-gap-h" class="gv-highlight-green">16px</span> H / <span id="gv-stat-gap-v" class="gv-highlight-yellow">16px</span> V</span>
+        <span class="gv-summary-dot">·</span>
+        <span>Title: <strong id="gv-stat-title-src" class="gv-summary-val">Attachment File</strong></span>
+        <span class="gv-summary-dot">·</span>
+        <span>Mode: <strong id="gv-stat-visibility-mode" class="gv-summary-val">Always Visible</strong></span>
+      </div>
+    </section>
+
+    <!-- Main Scrollable Gallery Area -->
+    <main class="gv-main-area">
+      <div class="gv-gallery-scroll-container">
+        <div id="gv-cards-grid" class="gv-cards-grid">
+          <!-- Cards injected dynamically -->
+        </div>
+
+        <!-- Empty State -->
+        <div id="gv-empty-state" class="gv-empty-state" style="display: none;">
+          <svg width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+            <circle cx="8.5" cy="8.5" r="1.5"></circle>
+            <polyline points="21 15 16 10 5 21"></polyline>
+          </svg>
+          <p>No matching image attachments found on this board.</p>
+        </div>
+      </div>
+
+      <!-- Slide-Out Settings Panel -->
+      <aside id="gv-settings-drawer" class="gv-settings-drawer">
+        <header class="gv-drawer-header">
+          <div class="gv-drawer-title-group">
+            <div class="gv-drawer-icon">🎛️</div>
+            <div>
+              <div class="gv-drawer-title">Gallery Settings</div>
+              <div class="gv-drawer-subtitle">Customize layout, spacing & labels</div>
             </div>
           </div>
-          
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
-            <span style="font-size: 11px; color: var(--text-muted);">↔ Horizontal Spacing</span>
-            <span id="drawer-val-gap-h" class="gv-highlight-green" style="font-size: 11px;">16 px</span>
-          </div>
-          <input type="range" id="drawer-slider-gap-h" class="gv-range-slider green-thumb" min="0" max="40" step="2" value="16" />
+          <button id="btn-close-drawer" class="gv-btn-close-drawer">✕</button>
+        </header>
 
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
-            <span style="font-size: 11px; color: var(--text-muted);">↕ Vertical Spacing</span>
-            <span id="drawer-val-gap-v" class="gv-highlight-yellow" style="font-size: 11px;">16 px</span>
+        <div class="gv-drawer-body">
+          <!-- Section 1: Column Width -->
+          <div class="gv-drawer-section">
+            <div class="gv-section-header">
+              <span>▤ COLUMN WIDTH</span>
+              <span id="drawer-val-col-width" class="gv-badge-val">280 px</span>
+            </div>
+            <input type="range" id="drawer-slider-col-width" class="gv-range-slider" min="180" max="480" step="10" value="280" />
+            <div class="gv-preset-grid">
+              <button class="gv-preset-btn" data-col="200">Compact</button>
+              <button class="gv-preset-btn active" data-col="280">Normal</button>
+              <button class="gv-preset-btn" data-col="360">Large</button>
+              <button class="gv-preset-btn" data-col="440">Wide</button>
+            </div>
           </div>
-          <input type="range" id="drawer-slider-gap-v" class="gv-range-slider yellow-thumb" min="0" max="40" step="2" value="16" />
+
+          <!-- Section 2: Image Spacing -->
+          <div class="gv-drawer-section">
+            <div class="gv-section-header">
+              <span>IMAGE SPACING (GAP)</span>
+              <div style="font-size: 11px; font-weight: normal; text-transform: none;">
+                <span id="btn-gap-flush" style="cursor: pointer; color: var(--accent-cyan);">Flush (0)</span> · 
+                <span id="btn-gap-default" style="cursor: pointer; color: var(--accent-cyan);">Default (16)</span>
+              </div>
+            </div>
+            
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
+              <span style="font-size: 11px; color: var(--text-muted);">↔ Horizontal Spacing</span>
+              <span id="drawer-val-gap-h" class="gv-highlight-green" style="font-size: 11px;">16 px</span>
+            </div>
+            <input type="range" id="drawer-slider-gap-h" class="gv-range-slider green-thumb" min="0" max="40" step="2" value="16" />
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
+              <span style="font-size: 11px; color: var(--text-muted);">↕ Vertical Spacing</span>
+              <span id="drawer-val-gap-v" class="gv-highlight-yellow" style="font-size: 11px;">16 px</span>
+            </div>
+            <input type="range" id="drawer-slider-gap-v" class="gv-range-slider yellow-thumb" min="0" max="40" step="2" value="16" />
+          </div>
+
+          <!-- Section 3: Image Name Visibility -->
+          <div class="gv-drawer-section">
+            <div class="gv-section-header">
+              <span>IMAGE NAME VISIBILITY</span>
+            </div>
+            <div class="gv-toggle-group">
+              <button class="gv-toggle-card active" data-mode="always">
+                <span>👁</span> Always visible
+              </button>
+              <button class="gv-toggle-card" data-mode="hover">
+                <span>🚫</span> Only on hover
+              </button>
+            </div>
+            <p id="drawer-visibility-desc" class="gv-help-text">
+              Titles remain fixed as a permanent caption on every thumbnail.
+            </p>
+          </div>
+
+          <!-- Section 4: Displayed Title Source -->
+          <div class="gv-drawer-section">
+            <div class="gv-section-header">
+              <span>DISPLAYED TITLE SOURCE</span>
+            </div>
+            <div class="gv-preset-grid" style="grid-template-columns: repeat(3, 1fr);">
+              <button class="gv-preset-btn active" data-source="attachment">Attachment File</button>
+              <button class="gv-preset-btn" data-source="card">Card Title</button>
+              <button class="gv-preset-btn" data-source="both">Both</button>
+            </div>
+          </div>
         </div>
 
-        <!-- Section 3: Image Name Visibility -->
-        <div class="gv-drawer-section">
-          <div class="gv-section-header">
-            <span>IMAGE NAME VISIBILITY</span>
-          </div>
-          <div class="gv-toggle-group">
-            <button class="gv-toggle-card active" data-mode="always">
-              <span>👁</span> Always visible
-            </button>
-            <button class="gv-toggle-card" data-mode="hover">
-              <span>🚫</span> Only on hover
-            </button>
-          </div>
-          <p id="drawer-visibility-desc" class="gv-help-text">
-            Titles remain fixed as a permanent caption on every thumbnail.
-          </p>
-        </div>
-
-        <!-- Section 4: Displayed Title Source -->
-        <div class="gv-drawer-section">
-          <div class="gv-section-header">
-            <span>DISPLAYED TITLE SOURCE</span>
-          </div>
-          <div class="gv-preset-grid" style="grid-template-columns: repeat(3, 1fr);">
-            <button class="gv-preset-btn active" data-source="attachment">Attachment File</button>
-            <button class="gv-preset-btn" data-source="card">Card Title</button>
-            <button class="gv-preset-btn" data-source="both">Both</button>
-          </div>
-        </div>
-      </div>
-
-      <footer class="gv-drawer-footer">
-        <button id="btn-drawer-reset" class="gv-btn-reset">
-          <span>↺</span> Reset Defaults
-        </button>
-        <button id="btn-drawer-done" class="gv-btn-done">
-          Done
-        </button>
-      </footer>
-    </aside>
-  </main>
+        <footer class="gv-drawer-footer">
+          <button id="btn-drawer-reset" class="gv-btn-reset">
+            <span>↺</span> Reset Defaults
+          </button>
+          <button id="btn-drawer-done" class="gv-btn-done">
+            Done
+          </button>
+        </footer>
+      </aside>
+    </main>
+  </div>
 
   <script src="../js/trello-api.js"></script>
   <script src="../js/board-gallery.js"></script>

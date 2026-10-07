@@ -4,7 +4,8 @@ const t = TrelloPowerUp.iframe();
 
 // State
 let allItems = [];
-let filteredItems = [];
+let allLists = [];
+let allLabels = [];
 let currentSettings = {
   colWidth: 280,
   gapH: 16,
@@ -32,7 +33,6 @@ const statVisibilityMode = document.getElementById('gv-stat-visibility-mode');
 
 // Settings Drawer Elements
 const settingsDrawer = document.getElementById('gv-settings-drawer');
-const btnAdjustSettings = document.getElementById('btn-adjust-settings');
 const btnOpenSettings = document.getElementById('btn-open-settings');
 const btnCloseDrawer = document.getElementById('btn-close-drawer');
 const btnDrawerDone = document.getElementById('btn-drawer-done');
@@ -55,43 +55,110 @@ const visibilityDesc = document.getElementById('drawer-visibility-desc');
 const btnAttachImage = document.getElementById('btn-attach-image');
 const fileInput = document.getElementById('gv-file-input');
 
-// Initialize
+// Initialize Power-Up rendering
 t.render(function () {
   return Promise.all([
-    t.board('name', 'lists', 'labels'),
-    t.cards('id', 'name', 'idList', 'labels', 'attachments'),
+    t.board('id', 'name'),
+    t.lists('id', 'name'),
+    t.cards('id', 'name', 'idList', 'labels', 'attachments', 'badges', 'cover'),
     t.get('member', 'private', 'galleryLayoutSettings')
-  ]).then(function ([board, cards, savedSettings]) {
+  ]).then(function ([board, lists, cards, savedSettings]) {
     if (savedSettings) {
       currentSettings = Object.assign(currentSettings, savedSettings);
     }
     applyLayoutSettings();
 
+    // Display real Board Name
     if (board && board.name) {
       boardNameSpan.textContent = `| ${board.name}`;
+    } else {
+      boardNameSpan.textContent = '';
     }
 
+    allLists = lists || [];
+
+    // Process Board Data
+    processBoardData(lists, cards);
+
     // Populate Filters
-    populateFilterDropdowns(board, cards);
+    populateFilterDropdowns(lists, allItems);
 
-    // Process Cards & Attachments
-    processBoardData(board, cards);
-
+    // Render cards
     renderGallery();
+  }).catch(function (err) {
+    console.error('Error loading Trello board data:', err);
   });
 });
 
-function populateFilterDropdowns(board, cards) {
-  const lists = board.lists || [];
-  const listCounts = {};
+function processBoardData(lists, cards) {
+  const listMap = {};
+  (lists || []).forEach(l => { listMap[l.id] = l.name; });
 
-  // Count items per list
+  allItems = [];
+  const labelMap = new Map();
+
   (cards || []).forEach(c => {
-    if (c.attachments && c.attachments.some(window.GalleryAPI.isImageAttachment)) {
-      listCounts[c.idList] = (listCounts[c.idList] || 0) + 1;
+    // Process Card Labels
+    const normalizedLabels = (c.labels || []).map(l => {
+      const displayName = l.name && l.name.trim().length > 0
+        ? l.name
+        : (l.color ? capitalize(l.color) : 'Label');
+      
+      const labelObj = {
+        id: l.id || displayName,
+        name: displayName,
+        color: l.color || 'blue'
+      };
+
+      if (!labelMap.has(displayName)) {
+        labelMap.set(displayName, labelObj);
+      }
+      return labelObj;
+    });
+
+    // Check attachments
+    if (c.attachments && c.attachments.length > 0) {
+      c.attachments.filter(window.GalleryAPI.isImageAttachment).forEach(att => {
+        allItems.push({
+          id: att.id,
+          name: att.name || 'Image Attachment',
+          url: att.url,
+          cardId: c.id,
+          cardName: c.name || 'Untitled Card',
+          listId: c.idList,
+          listName: listMap[c.idList] || 'List',
+          labels: normalizedLabels,
+          dimensions: att.previews && att.previews[0] ? `${att.previews[0].width}×${att.previews[0].height}` : 'Original'
+        });
+      });
+    } else if (c.cover && c.cover.sharedSourceUrl) {
+      // Cover image fallback if attachment isn't listed directly
+      allItems.push({
+        id: 'cover-' + c.id,
+        name: c.name + ' (Cover)',
+        url: c.cover.sharedSourceUrl,
+        cardId: c.id,
+        cardName: c.name || 'Untitled Card',
+        listId: c.idList,
+        listName: listMap[c.idList] || 'List',
+        labels: normalizedLabels,
+        dimensions: 'Cover'
+      });
     }
   });
 
+  allLabels = Array.from(labelMap.values());
+}
+
+function populateFilterDropdowns(lists, items) {
+  // Count items per list
+  const listCounts = {};
+  items.forEach(item => {
+    listCounts[item.listId] = (listCounts[item.listId] || 0) + 1;
+  });
+
+  // 1. Lists dropdown
+  const currentSelectedList = filterList.value;
   filterList.innerHTML = `<option value="ALL">All Lists (${lists.length})</option>`;
   lists.forEach(l => {
     const opt = document.createElement('option');
@@ -99,50 +166,21 @@ function populateFilterDropdowns(board, cards) {
     opt.textContent = `${l.name} (${listCounts[l.id] || 0})`;
     filterList.appendChild(opt);
   });
+  if (currentSelectedList && filterList.querySelector(`option[value="${currentSelectedList}"]`)) {
+    filterList.value = currentSelectedList;
+  }
 
-  // Extract all labels
-  const uniqueLabels = new Set();
-  (cards || []).forEach(c => {
-    (c.labels || []).forEach(lb => {
-      if (lb.name) uniqueLabels.add(lb.name);
-    });
-  });
-
-  filterLabel.innerHTML = '<option value="ALL">All Labels</option>';
-  uniqueLabels.forEach(lbl => {
+  // 2. Labels dropdown
+  const currentSelectedLabel = filterLabel.value;
+  filterLabel.innerHTML = `<option value="ALL">All Labels (${allLabels.length})</option>`;
+  allLabels.forEach(lbl => {
     const opt = document.createElement('option');
-    opt.value = lbl;
-    opt.textContent = lbl;
+    opt.value = lbl.name;
+    opt.textContent = lbl.name;
     filterLabel.appendChild(opt);
   });
-}
-
-function processBoardData(board, cards) {
-  const listMap = {};
-  (board.lists || []).forEach(l => { listMap[l.id] = l.name; });
-
-  allItems = [];
-  (cards || []).forEach(c => {
-    if (c.attachments) {
-      c.attachments.filter(window.GalleryAPI.isImageAttachment).forEach(att => {
-        allItems.push({
-          id: att.id,
-          name: att.name || 'image_attachment.png',
-          url: att.url,
-          cardId: c.id,
-          cardName: c.name || 'Untitled Card',
-          listId: c.idList,
-          listName: listMap[c.idList] || 'List',
-          labels: c.labels || [],
-          dimensions: att.previews && att.previews[0] ? `${att.previews[0].width}×${att.previews[0].height}` : '1600×1200'
-        });
-      });
-    }
-  });
-
-  // If no items on board yet, provide rich demo items so UI is instantly previewable
-  if (allItems.length === 0) {
-    allItems = getMockGalleryItems();
+  if (currentSelectedLabel && filterLabel.querySelector(`option[value="${currentSelectedLabel}"]`)) {
+    filterLabel.value = currentSelectedLabel;
   }
 }
 
@@ -151,13 +189,14 @@ function renderGallery() {
   const selectedList = filterList.value;
   const selectedLabel = filterLabel.value;
 
-  filteredItems = allItems.filter(item => {
+  const filteredItems = allItems.filter(item => {
     const matchesList = selectedList === 'ALL' || item.listId === selectedList;
     const matchesLabel = selectedLabel === 'ALL' || (item.labels || []).some(l => l.name === selectedLabel);
     const matchesSearch = !query || 
       item.name.toLowerCase().includes(query) || 
       item.cardName.toLowerCase().includes(query) || 
-      item.listName.toLowerCase().includes(query);
+      item.listName.toLowerCase().includes(query) ||
+      (item.labels || []).some(l => l.name.toLowerCase().includes(query));
 
     return matchesList && matchesLabel && matchesSearch;
   });
@@ -176,14 +215,14 @@ function renderGallery() {
   emptyState.style.display = 'none';
   cardsGrid.innerHTML = '';
 
-  filteredItems.forEach((item, index) => {
+  filteredItems.forEach((item) => {
     const cardEl = document.createElement('div');
     cardEl.className = `gv-card ${currentSettings.visibilityMode === 'hover' ? 'hide-meta' : ''}`;
 
     // Header label badges HTML
     const labelsHtml = (item.labels || []).map(l => {
       const colorClass = getBadgeColorClass(l.color || l.name);
-      return `<span class="gv-badge ${colorClass}">${l.name || 'Label'}</span>`;
+      return `<span class="gv-badge ${colorClass}">${escapeHtml(l.name)}</span>`;
     }).join('');
 
     // Title & subtitle logic based on setting
@@ -201,7 +240,7 @@ function renderGallery() {
       <div class="gv-card-header">
         <div class="gv-card-title-group">
           <span class="gv-card-icon">${getIconForList(item.listName)}</span>
-          <span class="gv-card-title" title="${item.cardName}">${item.cardName}</span>
+          <span class="gv-card-title" title="${escapeHtml(item.cardName)}">${escapeHtml(item.cardName)}</span>
         </div>
         <div class="gv-card-badges">
           ${labelsHtml}
@@ -209,16 +248,16 @@ function renderGallery() {
       </div>
 
       <div class="gv-card-image-wrap">
-        <img class="gv-card-image" src="${item.url}" alt="${item.name}" loading="lazy" />
+        <img class="gv-card-image" src="${item.url}" alt="${escapeHtml(item.name)}" loading="lazy" />
         <div class="gv-card-inner-overlay">
-          <span>${item.name}</span>
+          <span>${escapeHtml(item.name)}</span>
         </div>
       </div>
 
       <div class="gv-card-footer">
         <div class="gv-card-meta-left">
-          <div class="gv-card-filename" title="${primaryTitle}">${primaryTitle}</div>
-          <div class="gv-card-subtitle" title="${secondarySubtitle}">${secondarySubtitle}</div>
+          <div class="gv-card-filename" title="${escapeHtml(primaryTitle)}">${escapeHtml(primaryTitle)}</div>
+          <div class="gv-card-subtitle" title="${escapeHtml(secondarySubtitle)}">${escapeHtml(secondarySubtitle)}</div>
         </div>
         <div class="gv-card-dims">${item.dimensions}</div>
       </div>
@@ -226,12 +265,10 @@ function renderGallery() {
 
     // Click card to open in lightbox or show card
     cardEl.addEventListener('click', () => {
-      if (item.cardId) {
-        t.modal({
-          title: item.cardName || 'Gallery Viewer',
-          url: './gallery-modal.html',
-          fullscreen: true
-        });
+      if (item.cardId && t.showCard) {
+        t.showCard(item.cardId);
+      } else {
+        window.open(item.url, '_blank');
       }
     });
 
@@ -286,7 +323,6 @@ function saveSettings() {
 function openDrawer() { settingsDrawer.classList.add('open'); }
 function closeDrawer() { settingsDrawer.classList.remove('open'); }
 
-btnAdjustSettings.addEventListener('click', openDrawer);
 btnOpenSettings.addEventListener('click', openDrawer);
 btnCloseDrawer.addEventListener('click', closeDrawer);
 btnDrawerDone.addEventListener('click', () => {
@@ -378,7 +414,8 @@ fileInput.addEventListener('change', (e) => {
         name: file.name,
         url: event.target.result,
         cardName: 'Uploaded Image',
-        listName: 'Attachments',
+        listId: allLists[0] ? allLists[0].id : 'uploaded',
+        listName: allLists[0] ? allLists[0].name : 'Uploaded',
         labels: [{ name: 'New Upload', color: 'blue' }],
         dimensions: 'Original'
       });
@@ -388,81 +425,38 @@ fileInput.addEventListener('change', (e) => {
   }
 });
 
-// Helper Icon and Color Resolvers
+// Utilities
+function capitalize(str) {
+  if (!str) return '';
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 function getIconForList(listName) {
   const name = (listName || '').toLowerCase();
   if (name.includes('design') || name.includes('brand')) return '✈';
-  if (name.includes('wireframe') || name.includes('arch')) return '📐';
+  if (name.includes('wireframe') || name.includes('arch') || name.includes('todo')) return '📐';
   if (name.includes('mood') || name.includes('inspire')) return '🎨';
-  if (name.includes('market') || name.includes('product')) return '🚀';
+  if (name.includes('market') || name.includes('product') || name.includes('done')) return '🚀';
   return '📁';
 }
 
 function getBadgeColorClass(labelStr) {
   const l = (labelStr || '').toLowerCase();
-  if (l.includes('brand') || l.includes('purple')) return 'badge-purple';
-  if (l.includes('priority') || l.includes('red')) return 'badge-red';
-  if (l.includes('ux') || l.includes('ui') || l.includes('blue')) return 'badge-blue';
-  if (l.includes('proto') || l.includes('yellow')) return 'badge-yellow';
-  if (l.includes('market') || l.includes('green')) return 'badge-green';
-  return 'badge-blue';
-}
-
-function getMockGalleryItems() {
-  return [
-    {
-      id: 'demo-1',
-      name: 'brand_palette_guide_v2.png',
-      url: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=800&auto=format&fit=crop&q=80',
-      cardName: 'Visual Design & Branding',
-      listName: 'Design Team Board',
-      labels: [{ name: 'Brand Identity', color: 'purple' }, { name: 'High Priority', color: 'red' }],
-      dimensions: '1600×1200'
-    },
-    {
-      id: 'demo-2',
-      name: 'mobile_dashboard_dark_mockup.png',
-      url: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&auto=format&fit=crop&q=80',
-      cardName: 'Wireframes & Architecture',
-      listName: 'Design Team Board',
-      labels: [{ name: 'UI / UX', color: 'blue' }, { name: 'Prototype', color: 'yellow' }],
-      dimensions: '1125×2436'
-    },
-    {
-      id: 'demo-3',
-      name: 'isometric_crypto_vault_icon.png',
-      url: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=80',
-      cardName: 'Inspiration & Moodboard',
-      listName: 'Design Team Board',
-      labels: [{ name: 'Brand Identity', color: 'purple' }],
-      dimensions: '1200×1200'
-    },
-    {
-      id: 'demo-4',
-      name: 'marketing_banner_hero_v3.png',
-      url: 'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=800&auto=format&fit=crop&q=80',
-      cardName: 'Marketing & Production Assets',
-      listName: 'Design Team Board',
-      labels: [{ name: 'Marketing', color: 'green' }],
-      dimensions: '1920×1080'
-    },
-    {
-      id: 'demo-5',
-      name: 'user_flow_onboarding_step1.png',
-      url: 'https://images.unsplash.com/photo-1581291518857-4e27b48ff24e?w=800&auto=format&fit=crop&q=80',
-      cardName: 'Wireframes & Architecture',
-      listName: 'Design Team Board',
-      labels: [{ name: 'UI / UX', color: 'blue' }, { name: 'High Priority', color: 'red' }],
-      dimensions: '1440×900'
-    },
-    {
-      id: 'demo-6',
-      name: 'landing_page_social_preview.png',
-      url: 'https://images.unsplash.com/photo-1557683316-973673baf926?w=800&auto=format&fit=crop&q=80',
-      cardName: 'Marketing & Production Assets',
-      listName: 'Design Team Board',
-      labels: [{ name: 'Marketing', color: 'green' }],
-      dimensions: '1200×630'
-    }
-  ];
+  if (l.includes('purple') || l.includes('brand')) return 'badge-purple';
+  if (l.includes('red') || l.includes('priority')) return 'badge-red';
+  if (l.includes('blue') || l.includes('ux') || l.includes('ui')) return 'badge-blue';
+  if (l.includes('yellow') || l.includes('proto')) return 'badge-yellow';
+  if (l.includes('green') || l.includes('market')) return 'badge-green';
+  if (l.includes('orange')) return 'badge-orange';
+  return 'badge-gray';
 }
