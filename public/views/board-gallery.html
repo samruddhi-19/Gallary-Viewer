@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Board Media Gallery</title>
+  <link rel="stylesheet" href="../css/global.css">
+  <link rel="stylesheet" href="../css/gallery-modal.css">
+  <script src="https://p.trellocdn.com/power-up.min.js"></script>
+</head>
+<body>
+  <div class="gallery-container">
+    <!-- Top Bar -->
+    <header class="gallery-header">
+      <div class="gallery-title">
+        <span id="board-name">Board Media Gallery</span>
+        <span id="gallery-counter" class="counter-badge">Loading...</span>
+      </div>
+      <div class="gallery-actions">
+        <select id="list-filter" class="settings-select" style="background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.2);">
+          <option value="ALL">All Lists</option>
+        </select>
+        <button id="btn-close" class="icon-btn" title="Close">✕</button>
+      </div>
+    </header>
+
+    <!-- Board Image Grid -->
+    <div id="board-grid-view" class="gallery-grid active">
+      <!-- Grid items injected dynamically -->
+    </div>
+
+    <!-- Empty state placeholder -->
+    <div id="empty-state" class="empty-gallery" style="display: none;">
+      <svg width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+        <circle cx="8.5" cy="8.5" r="1.5"></circle>
+        <polyline points="21 15 16 10 5 21"></polyline>
+      </svg>
+      <p>No image attachments found across cards on this board.</p>
+    </div>
+  </div>
+
+  <script src="../js/trello-api.js"></script>
+  <script src="../js/board-gallery.js"></script>
+</body>
+</html>

@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Card Gallery Section</title>
+  <link rel="stylesheet" href="../css/global.css">
+  <link rel="stylesheet" href="../css/card-section.css">
+  <script src="https://p.trellocdn.com/power-up.min.js"></script>
+</head>
+<body>
+  <div class="card-section-container">
+    <div class="card-section-header">
+      <span class="card-section-title">Attached Media</span>
+      <button id="btn-view-all" class="btn-secondary" style="font-size: 11px; padding: 4px 8px;">View Fullscreen</button>
+    </div>
+    <div id="thumbnails-grid" class="card-thumbnails-grid">
+      <!-- Injected dynamically -->
+    </div>
+    <div id="empty-state" class="empty-card-section" style="display: none;">
+      No image attachments on this card.
+    </div>
+  </div>
+
+  <script src="../js/trello-api.js"></script>
+  <script src="../js/card-section.js"></script>
+</body>
+</html>

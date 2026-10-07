@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Authorize Gallery Viewer</title>
+  <link rel="stylesheet" href="../css/global.css">
+  <link rel="stylesheet" href="../css/settings.css">
+  <script src="https://p.trellocdn.com/power-up.min.js"></script>
+</head>
+<body>
+  <div class="settings-container">
+    <div class="settings-group">
+      <h3 class="settings-label" style="font-size: 15px;">Authorize Trello Access</h3>
+      <p class="settings-description">
+        Authorize Gallery Viewer to access image attachments on private cards and boards securely.
+      </p>
+    </div>
+
+    <div id="auth-unauthorized" style="display: flex; flex-direction: column; gap: 12px; margin-top: 8px;">
+      <button id="btn-authorize" class="btn-primary" style="justify-content: center;">
+        🔑 Authorize with Trello
+      </button>
+    </div>
+
+    <div id="auth-authorized" style="display: none; flex-direction: column; gap: 12px; margin-top: 8px;">
+      <div style="color: #22a06b; font-weight: 500; display: flex; align-items: center; gap: 6px;">
+        ✓ Account is authorized
+      </div>
+      <button id="btn-deauthorize" class="btn-secondary" style="color: #ae2e24; border-color: #f87171;">
+        Revoke Authorization
+      </button>
+    </div>
+  </div>
+
+  <script src="../js/auth.js"></script>
+</body>
+</html>

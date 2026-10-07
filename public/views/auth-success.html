@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Authorization Successful</title>
+</head>
+<body>
+  <p>Authorizing Gallery Viewer, please wait...</p>
+  <script>
+    const hash = window.location.hash.substring(1);
+    const params = new URLSearchParams(hash);
+    const token = params.get('token');
+
+    if (token) {
+      if (window.opener && window.opener.authorize) {
+        window.opener.authorize(token);
+      } else {
+        // Fallback for direct token handling
+        localStorage.setItem('trello_token', token);
+      }
+      window.close();
+    } else {
+      document.body.innerHTML = '<p>Authorization failed. Please close this window and try again.</p>';
+    }
+  </script>
+</body>
+</html>
