@@ -1,462 +1,437 @@
 /* global TrelloPowerUp */
 
-const t = TrelloPowerUp.iframe();
+(function () {
+  const t = TrelloPowerUp.iframe();
 
-// State
-let allItems = [];
-let allLists = [];
-let allLabels = [];
-let currentSettings = {
-  colWidth: 280,
-  gapH: 16,
-  gapV: 16,
-  visibilityMode: 'always', // 'always' | 'hover'
-  titleSource: 'attachment' // 'attachment' | 'card' | 'both'
-};
+  // Color mapping for Trello label colors
+  const LABEL_COLORS = {
+    green: '#2ab38a',
+    yellow: '#e5a21a',
+    orange: '#f06595',
+    red: '#f5655a',
+    purple: '#8f7ee7',
+    blue: '#339af0',
+    sky: '#22b8cf',
+    lime: '#94d82d',
+    pink: '#da77f2',
+    black: '#495057',
+    default: '#8d98b1'
+  };
 
-// DOM References
-const boardNameSpan = document.getElementById('gv-board-name');
-const cardsGrid = document.getElementById('gv-cards-grid');
-const emptyState = document.getElementById('gv-empty-state');
-const filterList = document.getElementById('gv-filter-list');
-const filterLabel = document.getElementById('gv-filter-label');
-const searchInput = document.getElementById('gv-search-input');
-const showingCountSpan = document.getElementById('gv-showing-count');
+  let allBoardItems = [];
+  let allLists = [];
+  let availableLabels = {};
+  let visibleItems = [];
+  let currentIndex = -1;
 
-// Stats strip elements
-const statCount = document.getElementById('gv-stat-count');
-const statCol = document.getElementById('gv-stat-col');
-const statGapH = document.getElementById('gv-stat-gap-h');
-const statGapV = document.getElementById('gv-stat-gap-v');
-const statTitleSrc = document.getElementById('gv-stat-title-src');
-const statVisibilityMode = document.getElementById('gv-stat-visibility-mode');
+  const state = {
+    date: 'all',
+    list: 'all',
+    label: null,
+    q: '',
+    col: 260,
+    gx: 16,
+    gy: 16,
+    title: 'both',
+    reveal: 'always'
+  };
 
-// Settings Drawer Elements
-const settingsDrawer = document.getElementById('gv-settings-drawer');
-const btnOpenSettings = document.getElementById('btn-open-settings');
-const btnCloseDrawer = document.getElementById('btn-close-drawer');
-const btnDrawerDone = document.getElementById('btn-drawer-done');
-const btnDrawerReset = document.getElementById('btn-drawer-reset');
+  const DEF = { col: 260, gx: 16, gy: 16, title: 'both', reveal: 'always' };
 
-const sliderColWidth = document.getElementById('drawer-slider-col-width');
-const valColWidth = document.getElementById('drawer-val-col-width');
-const sliderGapH = document.getElementById('drawer-slider-gap-h');
-const valGapH = document.getElementById('drawer-val-gap-h');
-const sliderGapV = document.getElementById('drawer-slider-gap-v');
-const valGapV = document.getElementById('drawer-val-gap-v');
+  const $ = function (id) { return document.getElementById(id); };
 
-const btnGapFlush = document.getElementById('btn-gap-flush');
-const btnGapDefault = document.getElementById('btn-gap-default');
-const colPresetBtns = document.querySelectorAll('.gv-preset-btn[data-col]');
-const visibilityCards = document.querySelectorAll('.gv-toggle-card[data-mode]');
-const titleSourceBtns = document.querySelectorAll('.gv-preset-btn[data-source]');
-const visibilityDesc = document.getElementById('drawer-visibility-desc');
-
-const btnAttachImage = document.getElementById('btn-attach-image');
-const fileInput = document.getElementById('gv-file-input');
-
-// Initialize Power-Up rendering
-t.render(function () {
-  return Promise.all([
-    t.board('id', 'name'),
-    t.lists('id', 'name'),
-    t.cards('id', 'name', 'idList', 'labels', 'attachments', 'badges', 'cover'),
-    t.get('member', 'private', 'galleryLayoutSettings')
-  ]).then(function ([board, lists, cards, savedSettings]) {
-    if (savedSettings) {
-      currentSettings = Object.assign(currentSettings, savedSettings);
-    }
-    applyLayoutSettings();
-
-    // Display real Board Name
-    if (board && board.name) {
-      boardNameSpan.textContent = `| ${board.name}`;
-    } else {
-      boardNameSpan.textContent = '';
-    }
-
-    allLists = lists || [];
-
-    // Process Board Data
-    processBoardData(lists, cards);
-
-    // Populate Filters
-    populateFilterDropdowns(lists, allItems);
-
-    // Render cards
-    renderGallery();
-  }).catch(function (err) {
-    console.error('Error loading Trello board data:', err);
-  });
-});
-
-function processBoardData(lists, cards) {
-  const listMap = {};
-  (lists || []).forEach(l => { listMap[l.id] = l.name; });
-
-  allItems = [];
-  const labelMap = new Map();
-
-  (cards || []).forEach(c => {
-    // Process Card Labels
-    const normalizedLabels = (c.labels || []).map(l => {
-      const displayName = l.name && l.name.trim().length > 0
-        ? l.name
-        : (l.color ? capitalize(l.color) : 'Label');
-      
-      const labelObj = {
-        id: l.id || displayName,
-        name: displayName,
-        color: l.color || 'blue'
-      };
-
-      if (!labelMap.has(displayName)) {
-        labelMap.set(displayName, labelObj);
-      }
-      return labelObj;
+  function esc(s) {
+    return String(s || '').replace(/[&<>"]/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
     });
+  }
 
-    // Check attachments
-    if (c.attachments && c.attachments.length > 0) {
-      c.attachments.filter(window.GalleryAPI.isImageAttachment).forEach(att => {
-        allItems.push({
-          id: att.id,
-          name: att.name || 'Image Attachment',
-          url: att.url,
+  function getDaysAgo(dateString) {
+    if (!dateString) return 0;
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffTime = Math.abs(now - date);
+    return Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  }
+
+  function formatTimeAgo(days) {
+    if (days === 0) return 'Today';
+    if (days === 1) return 'Yesterday';
+    return days + ' days ago';
+  }
+
+  // Trello Power-Up Render
+  t.render(function () {
+    return Promise.all([
+      t.board('id', 'name'),
+      t.lists('id', 'name'),
+      t.cards('id', 'name', 'idList', 'labels', 'attachments', 'badges', 'cover', 'dateLastActivity'),
+      t.get('member', 'private', 'galleryDisplaySettings')
+    ]).then(function ([board, lists, cards, savedSettings]) {
+      if (savedSettings) {
+        Object.assign(state, savedSettings);
+      }
+
+      if (board && board.name) {
+        $('boardTitle').textContent = board.name;
+      }
+
+      allLists = lists || [];
+      processTrelloData(lists, cards);
+      populateListDropdown();
+      renderChips();
+      syncSettings();
+      render();
+    }).catch(function (err) {
+      console.error('Error rendering gallery data:', err);
+    });
+  });
+
+  function processTrelloData(lists, cards) {
+    const listMap = {};
+    (lists || []).forEach(l => { listMap[l.id] = l.name; });
+
+    allBoardItems = [];
+    availableLabels = {};
+
+    (cards || []).forEach(c => {
+      const days = getDaysAgo(c.dateLastActivity);
+      
+      // Determine primary label
+      let primaryLabel = 'General';
+      let primaryColor = LABEL_COLORS.default;
+
+      if (c.labels && c.labels.length > 0) {
+        const lb = c.labels[0];
+        primaryLabel = lb.name && lb.name.trim().length > 0 ? lb.name : (lb.color ? capitalize(lb.color) : 'Label');
+        primaryColor = LABEL_COLORS[lb.color] || LABEL_COLORS.default;
+        
+        c.labels.forEach(l => {
+          const name = l.name && l.name.trim().length > 0 ? l.name : (l.color ? capitalize(l.color) : 'Label');
+          availableLabels[name] = { c: LABEL_COLORS[l.color] || LABEL_COLORS.default };
+        });
+      }
+
+      if (c.attachments && c.attachments.length > 0) {
+        c.attachments.filter(window.GalleryAPI.isImageAttachment).forEach(att => {
+          allBoardItems.push({
+            id: att.id,
+            f: att.name || 'image_attachment.png',
+            url: att.url,
+            card: c.name || 'Untitled Card',
+            cardId: c.id,
+            listId: c.idList,
+            listName: listMap[c.idList] || 'List',
+            l: primaryLabel,
+            color: primaryColor,
+            d: days,
+            date: att.date || c.dateLastActivity
+          });
+        });
+      } else if (c.cover && c.cover.sharedSourceUrl) {
+        allBoardItems.push({
+          id: 'cover-' + c.id,
+          f: c.name + ' (Cover)',
+          url: c.cover.sharedSourceUrl,
+          card: c.name || 'Untitled Card',
           cardId: c.id,
-          cardName: c.name || 'Untitled Card',
           listId: c.idList,
           listName: listMap[c.idList] || 'List',
-          labels: normalizedLabels,
-          dimensions: att.previews && att.previews[0] ? `${att.previews[0].width}×${att.previews[0].height}` : 'Original'
+          l: primaryLabel,
+          color: primaryColor,
+          d: days,
+          date: c.dateLastActivity
         });
-      });
-    } else if (c.cover && c.cover.sharedSourceUrl) {
-      // Cover image fallback if attachment isn't listed directly
-      allItems.push({
-        id: 'cover-' + c.id,
-        name: c.name + ' (Cover)',
-        url: c.cover.sharedSourceUrl,
-        cardId: c.id,
-        cardName: c.name || 'Untitled Card',
-        listId: c.idList,
-        listName: listMap[c.idList] || 'List',
-        labels: normalizedLabels,
-        dimensions: 'Cover'
-      });
-    }
-  });
-
-  allLabels = Array.from(labelMap.values());
-}
-
-function populateFilterDropdowns(lists, items) {
-  // Count items per list
-  const listCounts = {};
-  items.forEach(item => {
-    listCounts[item.listId] = (listCounts[item.listId] || 0) + 1;
-  });
-
-  // 1. Lists dropdown
-  const currentSelectedList = filterList.value;
-  filterList.innerHTML = `<option value="ALL">All Lists (${lists.length})</option>`;
-  lists.forEach(l => {
-    const opt = document.createElement('option');
-    opt.value = l.id;
-    opt.textContent = `${l.name} (${listCounts[l.id] || 0})`;
-    filterList.appendChild(opt);
-  });
-  if (currentSelectedList && filterList.querySelector(`option[value="${currentSelectedList}"]`)) {
-    filterList.value = currentSelectedList;
-  }
-
-  // 2. Labels dropdown
-  const currentSelectedLabel = filterLabel.value;
-  filterLabel.innerHTML = `<option value="ALL">All Labels (${allLabels.length})</option>`;
-  allLabels.forEach(lbl => {
-    const opt = document.createElement('option');
-    opt.value = lbl.name;
-    opt.textContent = lbl.name;
-    filterLabel.appendChild(opt);
-  });
-  if (currentSelectedLabel && filterLabel.querySelector(`option[value="${currentSelectedLabel}"]`)) {
-    filterLabel.value = currentSelectedLabel;
-  }
-}
-
-function renderGallery() {
-  const query = (searchInput.value || '').toLowerCase().trim();
-  const selectedList = filterList.value;
-  const selectedLabel = filterLabel.value;
-
-  const filteredItems = allItems.filter(item => {
-    const matchesList = selectedList === 'ALL' || item.listId === selectedList;
-    const matchesLabel = selectedLabel === 'ALL' || (item.labels || []).some(l => l.name === selectedLabel);
-    const matchesSearch = !query || 
-      item.name.toLowerCase().includes(query) || 
-      item.cardName.toLowerCase().includes(query) || 
-      item.listName.toLowerCase().includes(query) ||
-      (item.labels || []).some(l => l.name.toLowerCase().includes(query));
-
-    return matchesList && matchesLabel && matchesSearch;
-  });
-
-  // Update Counters & Stats
-  showingCountSpan.textContent = filteredItems.length;
-  statCount.textContent = `${filteredItems.length} image${filteredItems.length !== 1 ? 's' : ''}`;
-
-  if (filteredItems.length === 0) {
-    cardsGrid.style.display = 'none';
-    emptyState.style.display = 'flex';
-    return;
-  }
-
-  cardsGrid.style.display = 'grid';
-  emptyState.style.display = 'none';
-  cardsGrid.innerHTML = '';
-
-  filteredItems.forEach((item) => {
-    const cardEl = document.createElement('div');
-    cardEl.className = `gv-card ${currentSettings.visibilityMode === 'hover' ? 'hide-meta' : ''}`;
-
-    // Header label badges HTML
-    const labelsHtml = (item.labels || []).map(l => {
-      const colorClass = getBadgeColorClass(l.color || l.name);
-      return `<span class="gv-badge ${colorClass}">${escapeHtml(l.name)}</span>`;
-    }).join('');
-
-    // Title & subtitle logic based on setting
-    let primaryTitle = item.name;
-    let secondarySubtitle = item.cardName;
-    if (currentSettings.titleSource === 'card') {
-      primaryTitle = item.cardName;
-      secondarySubtitle = item.listName;
-    } else if (currentSettings.titleSource === 'both') {
-      primaryTitle = `${item.cardName} • ${item.name}`;
-      secondarySubtitle = item.listName;
-    }
-
-    cardEl.innerHTML = `
-      <div class="gv-card-header">
-        <div class="gv-card-title-group">
-          <span class="gv-card-icon">${getIconForList(item.listName)}</span>
-          <span class="gv-card-title" title="${escapeHtml(item.cardName)}">${escapeHtml(item.cardName)}</span>
-        </div>
-        <div class="gv-card-badges">
-          ${labelsHtml}
-        </div>
-      </div>
-
-      <div class="gv-card-image-wrap">
-        <img class="gv-card-image" src="${item.url}" alt="${escapeHtml(item.name)}" loading="lazy" />
-        <div class="gv-card-inner-overlay">
-          <span>${escapeHtml(item.name)}</span>
-        </div>
-      </div>
-
-      <div class="gv-card-footer">
-        <div class="gv-card-meta-left">
-          <div class="gv-card-filename" title="${escapeHtml(primaryTitle)}">${escapeHtml(primaryTitle)}</div>
-          <div class="gv-card-subtitle" title="${escapeHtml(secondarySubtitle)}">${escapeHtml(secondarySubtitle)}</div>
-        </div>
-        <div class="gv-card-dims">${item.dimensions}</div>
-      </div>
-    `;
-
-    // Click card to open in lightbox or show card
-    cardEl.addEventListener('click', () => {
-      if (item.cardId && t.showCard) {
-        t.showCard(item.cardId);
-      } else {
-        window.open(item.url, '_blank');
       }
     });
 
-    cardsGrid.appendChild(cardEl);
-  });
-}
-
-function applyLayoutSettings() {
-  const root = document.documentElement;
-  root.style.setProperty('--col-width', `${currentSettings.colWidth}px`);
-  root.style.setProperty('--gap-h', `${currentSettings.gapH}px`);
-  root.style.setProperty('--gap-v', `${currentSettings.gapV}px`);
-
-  // Update Summary Strip
-  statCol.textContent = `${currentSettings.colWidth}px`;
-  statGapH.textContent = `${currentSettings.gapH}px`;
-  statGapV.textContent = `${currentSettings.gapV}px`;
-  statTitleSrc.textContent = currentSettings.titleSource === 'card' ? 'Card Title' : currentSettings.titleSource === 'both' ? 'Both' : 'Attachment File';
-  statVisibilityMode.textContent = currentSettings.visibilityMode === 'hover' ? 'Only on hover' : 'Always Visible';
-
-  // Update Drawer Inputs
-  sliderColWidth.value = currentSettings.colWidth;
-  valColWidth.textContent = `${currentSettings.colWidth} px`;
-
-  sliderGapH.value = currentSettings.gapH;
-  valGapH.textContent = `${currentSettings.gapH} px`;
-
-  sliderGapV.value = currentSettings.gapV;
-  valGapV.textContent = `${currentSettings.gapV} px`;
-
-  // Preset Buttons sync
-  colPresetBtns.forEach(btn => {
-    btn.classList.toggle('active', parseInt(btn.getAttribute('data-col')) === currentSettings.colWidth);
-  });
-
-  visibilityCards.forEach(btn => {
-    btn.classList.toggle('active', btn.getAttribute('data-mode') === currentSettings.visibilityMode);
-  });
-
-  titleSourceBtns.forEach(btn => {
-    btn.classList.toggle('active', btn.getAttribute('data-source') === currentSettings.titleSource);
-  });
-}
-
-function saveSettings() {
-  applyLayoutSettings();
-  renderGallery();
-  return t.set('member', 'private', 'galleryLayoutSettings', currentSettings);
-}
-
-// Drawer Controls
-function openDrawer() { settingsDrawer.classList.add('open'); }
-function closeDrawer() { settingsDrawer.classList.remove('open'); }
-
-btnOpenSettings.addEventListener('click', openDrawer);
-btnCloseDrawer.addEventListener('click', closeDrawer);
-btnDrawerDone.addEventListener('click', () => {
-  saveSettings();
-  closeDrawer();
-});
-
-btnDrawerReset.addEventListener('click', () => {
-  currentSettings = {
-    colWidth: 280,
-    gapH: 16,
-    gapV: 16,
-    visibilityMode: 'always',
-    titleSource: 'attachment'
-  };
-  saveSettings();
-});
-
-// Slider Listeners
-sliderColWidth.addEventListener('input', (e) => {
-  currentSettings.colWidth = parseInt(e.target.value);
-  applyLayoutSettings();
-  renderGallery();
-});
-
-sliderGapH.addEventListener('input', (e) => {
-  currentSettings.gapH = parseInt(e.target.value);
-  applyLayoutSettings();
-});
-
-sliderGapV.addEventListener('input', (e) => {
-  currentSettings.gapV = parseInt(e.target.value);
-  applyLayoutSettings();
-});
-
-btnGapFlush.addEventListener('click', () => {
-  currentSettings.gapH = 0;
-  currentSettings.gapV = 0;
-  saveSettings();
-});
-
-btnGapDefault.addEventListener('click', () => {
-  currentSettings.gapH = 16;
-  currentSettings.gapV = 16;
-  saveSettings();
-});
-
-colPresetBtns.forEach(btn => {
-  btn.addEventListener('click', () => {
-    currentSettings.colWidth = parseInt(btn.getAttribute('data-col'));
-    saveSettings();
-  });
-});
-
-visibilityCards.forEach(btn => {
-  btn.addEventListener('click', () => {
-    currentSettings.visibilityMode = btn.getAttribute('data-mode');
-    visibilityDesc.textContent = currentSettings.visibilityMode === 'always'
-      ? 'Titles remain fixed as a permanent caption on every thumbnail.'
-      : 'Titles and metadata reveal smoothly when hovering over cards.';
-    saveSettings();
-  });
-});
-
-titleSourceBtns.forEach(btn => {
-  btn.addEventListener('click', () => {
-    currentSettings.titleSource = btn.getAttribute('data-source');
-    saveSettings();
-  });
-});
-
-// Search & Filter Events
-searchInput.addEventListener('input', renderGallery);
-filterList.addEventListener('change', renderGallery);
-filterLabel.addEventListener('change', renderGallery);
-
-// Attach Image button
-btnAttachImage.addEventListener('click', () => {
-  fileInput.click();
-});
-
-fileInput.addEventListener('change', (e) => {
-  if (e.target.files && e.target.files[0]) {
-    const file = e.target.files[0];
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      allItems.unshift({
-        id: 'upload-' + Date.now(),
-        name: file.name,
-        url: event.target.result,
-        cardName: 'Uploaded Image',
-        listId: allLists[0] ? allLists[0].id : 'uploaded',
-        listName: allLists[0] ? allLists[0].name : 'Uploaded',
-        labels: [{ name: 'New Upload', color: 'blue' }],
-        dimensions: 'Original'
-      });
-      renderGallery();
-    };
-    reader.readAsDataURL(file);
+    // If completely empty board, add helpful demo cards so design looks alive
+    if (allBoardItems.length === 0) {
+      allBoardItems = getMockItems();
+      availableLabels = {
+        Design: { c: '#8f7ee7' },
+        Bug: { c: '#f5655a' },
+        Marketing: { c: '#e5a21a' },
+        Docs: { c: '#2ab38a' }
+      };
+    }
   }
-});
 
-// Utilities
-function capitalize(str) {
-  if (!str) return '';
-  return str.charAt(0).toUpperCase() + str.slice(1);
-}
+  function populateListDropdown() {
+    const listCounts = {};
+    allBoardItems.forEach(it => {
+      if (it.listId) listCounts[it.listId] = (listCounts[it.listId] || 0) + 1;
+    });
 
-function escapeHtml(str) {
-  if (!str) return '';
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
-}
+    let html = '<option value="all">All lists</option>';
+    allLists.forEach(l => {
+      const cnt = listCounts[l.id] || 0;
+      html += `<option value="${l.id}" ${state.list === l.id ? 'selected' : ''}>${esc(l.name)} (${cnt})</option>`;
+    });
+    $('listSelect').innerHTML = html;
+  }
 
-function getIconForList(listName) {
-  const name = (listName || '').toLowerCase();
-  if (name.includes('design') || name.includes('brand')) return '✈';
-  if (name.includes('wireframe') || name.includes('arch') || name.includes('todo')) return '📐';
-  if (name.includes('mood') || name.includes('inspire')) return '🎨';
-  if (name.includes('market') || name.includes('product') || name.includes('done')) return '🚀';
-  return '📁';
-}
+  function renderChips() {
+    let html = '';
+    Object.keys(availableLabels).forEach(function (k) {
+      const isPressed = state.label === k;
+      html += `<button class="chip" data-l="${esc(k)}" aria-pressed="${isPressed}">
+        <span class="dot" style="--c:${availableLabels[k].c}"></span>${esc(k)}
+      </button>`;
+    });
+    $('labelChips').innerHTML = html;
+  }
 
-function getBadgeColorClass(labelStr) {
-  const l = (labelStr || '').toLowerCase();
-  if (l.includes('purple') || l.includes('brand')) return 'badge-purple';
-  if (l.includes('red') || l.includes('priority')) return 'badge-red';
-  if (l.includes('blue') || l.includes('ux') || l.includes('ui')) return 'badge-blue';
-  if (l.includes('yellow') || l.includes('proto')) return 'badge-yellow';
-  if (l.includes('green') || l.includes('market')) return 'badge-green';
-  if (l.includes('orange')) return 'badge-orange';
-  return 'badge-gray';
-}
+  function match(it) {
+    if (state.list !== 'all' && it.listId !== state.list) return false;
+    if (state.label && it.l !== state.label) return false;
+    if (state.date === 'today' && it.d > 0) return false;
+    if (state.date === 'week' && it.d > 7) return false;
+    if (state.date === 'month' && it.d > 30) return false;
+    const q = state.q.trim().toLowerCase();
+    if (q && (it.f + ' ' + it.card + ' ' + (it.listName || '')).toLowerCase().indexOf(q) < 0) return false;
+    return true;
+  }
+
+  function render() {
+    visibleItems = allBoardItems.filter(match);
+    const isFiltered = state.date !== 'all' || state.list !== 'all' || state.label || state.q.trim();
+    $('reset').hidden = !isFiltered;
+    $('count').innerHTML = `<b>${visibleItems.length}</b> of ${allBoardItems.length} images`;
+
+    const s = $('scroll');
+    if (!visibleItems.length) {
+      const noBoard = allBoardItems.length === 0;
+      s.innerHTML = `
+        <div class="empty">
+          <div class="empty-in">
+            <div class="empty-ic">
+              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="1.6"/><path d="m21 15-4.5-4.5L6 21"/>
+              </svg>
+            </div>
+            <h2>${noBoard ? 'No images on this board yet' : 'No images match these filters'}</h2>
+            <p>${noBoard ? 'Attach an image to any card and it will show up here.' : 'Try a wider date range or clear your label filter.'}</p>
+            <div class="empty-actions">
+              ${noBoard ? '<button class="btn primary" data-act="attach">Attach image</button>' : '<button class="btn primary" data-act="reset">Clear filters</button>'}
+            </div>
+          </div>
+        </div>`;
+      return;
+    }
+
+    let html = `<div class="grid" id="grid" data-title="${state.title}" data-reveal="${state.reveal}" style="--col:${state.col}px;--gx:${state.gx}px;--gy:${state.gy}px">`;
+    visibleItems.forEach((it, i) => {
+      const dotColor = (availableLabels[it.l] && availableLabels[it.l].c) || it.color || '#8d98b1';
+      html += `
+        <button class="tile" data-i="${i}" aria-label="Preview ${esc(it.f)}, on card ${esc(it.card)}">
+          <span class="ph">
+            <img src="${it.url}" alt="${esc(it.f)}" loading="lazy" />
+          </span>
+          <span class="over">
+            <span class="tag">
+              <span class="dot" style="--c:${dotColor}"></span>${esc(it.l)}
+            </span>
+            <span class="cap">
+              <strong>${esc(it.card)}</strong>
+              <span>${esc(it.f)} · ${formatTimeAgo(it.d)}</span>
+            </span>
+          </span>
+        </button>`;
+    });
+    s.innerHTML = html + '</div>';
+  }
+
+  function applyLayout() {
+    const g = $('grid');
+    if (!g) return;
+    g.style.setProperty('--col', state.col + 'px');
+    g.style.setProperty('--gx', state.gx + 'px');
+    g.style.setProperty('--gy', state.gy + 'px');
+    g.dataset.title = state.title;
+    g.dataset.reveal = state.reveal;
+    t.set('member', 'private', 'galleryDisplaySettings', state);
+  }
+
+  function setSeg(id, v) {
+    Array.prototype.forEach.call($(id).querySelectorAll('button'), function (b) {
+      b.setAttribute('aria-checked', String(b.dataset.v === v));
+    });
+  }
+
+  function syncSettings() {
+    $('col').value = state.col; $('colOut').textContent = state.col + ' px';
+    $('gx').value = state.gx;   $('gxOut').textContent = state.gx + ' px';
+    $('gy').value = state.gy;   $('gyOut').textContent = state.gy + ' px';
+    setSeg('titleSeg', state.title);
+    setSeg('revealSeg', state.reveal);
+  }
+
+  function openLb(i) {
+    currentIndex = i;
+    const it = visibleItems[i];
+    $('lbPic').innerHTML = `<img class="big" src="${it.url}" alt="${esc(it.f)}" />`;
+    $('lbTitle').textContent = it.card;
+    $('lbMeta').textContent = `${it.f} · ${it.l} · ${formatTimeAgo(it.d)}`;
+    
+    // Set download link
+    const dlBtn = $('lbDl');
+    dlBtn.href = it.url;
+    dlBtn.setAttribute('download', it.f);
+
+    $('lb').classList.add('open');
+    $('lbClose').focus();
+  }
+
+  function closeLb() { $('lb').classList.remove('open'); }
+  function step(n) {
+    if (!visibleItems.length) return;
+    openLb((currentIndex + n + visibleItems.length) % visibleItems.length);
+  }
+
+  function resetFilters() {
+    state.date = 'all';
+    state.list = 'all';
+    state.label = null;
+    state.q = '';
+    $('q').value = '';
+    $('listSelect').value = 'all';
+    setSeg('dateSeg', 'all');
+    renderChips();
+    render();
+  }
+
+  // Event Listeners
+  $('listSelect').addEventListener('change', function (e) {
+    state.list = e.target.value;
+    render();
+  });
+
+  $('dateSeg').addEventListener('click', function (e) {
+    const b = e.target.closest('button');
+    if (!b) return;
+    state.date = b.dataset.v;
+    setSeg('dateSeg', state.date);
+    render();
+  });
+
+  $('labelChips').addEventListener('click', function (e) {
+    const b = e.target.closest('.chip');
+    if (!b) return;
+    state.label = state.label === b.dataset.l ? null : b.dataset.l;
+    renderChips();
+    render();
+  });
+
+  $('q').addEventListener('input', function (e) {
+    state.q = e.target.value;
+    render();
+  });
+
+  $('reset').addEventListener('click', resetFilters);
+
+  $('scroll').addEventListener('click', function (e) {
+    const tile = e.target.closest('.tile');
+    if (tile) return openLb(+tile.dataset.i);
+    const act = e.target.closest('[data-act]');
+    if (!act) return;
+    if (act.dataset.act === 'reset') resetFilters();
+    if (act.dataset.act === 'attach') $('fileInput').click();
+  });
+
+  $('attach').addEventListener('click', function () {
+    $('fileInput').click();
+  });
+
+  $('fileInput').addEventListener('change', function (e) {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      reader.onload = function (event) {
+        allBoardItems.unshift({
+          id: 'upload-' + Date.now(),
+          f: file.name,
+          url: event.target.result,
+          card: 'New Upload',
+          listName: 'Attachments',
+          l: 'Upload',
+          color: '#339af0',
+          d: 0
+        });
+        availableLabels['Upload'] = { c: '#339af0' };
+        renderChips();
+        render();
+      };
+      reader.readAsDataURL(file);
+    }
+  });
+
+  $('settingsBtn').addEventListener('click', function () {
+    const open = $('drawer').classList.toggle('open');
+    this.setAttribute('aria-pressed', String(open));
+  });
+
+  ['col', 'gx', 'gy'].forEach(function (k) {
+    $(k).addEventListener('input', function (e) {
+      state[k] = +e.target.value;
+      $(k + 'Out').textContent = state[k] + ' px';
+      applyLayout();
+    });
+  });
+
+  $('titleSeg').addEventListener('click', function (e) {
+    const b = e.target.closest('button');
+    if (!b) return;
+    state.title = b.dataset.v;
+    setSeg('titleSeg', state.title);
+    applyLayout();
+  });
+
+  $('revealSeg').addEventListener('click', function (e) {
+    const b = e.target.closest('button');
+    if (!b) return;
+    state.reveal = b.dataset.v;
+    setSeg('revealSeg', state.reveal);
+    applyLayout();
+  });
+
+  $('defaults').addEventListener('click', function () {
+    Object.keys(DEF).forEach(function (k) { state[k] = DEF[k]; });
+    syncSettings();
+    applyLayout();
+  });
+
+  $('lbClose').addEventListener('click', closeLb);
+  $('prev').addEventListener('click', function () { step(-1); });
+  $('next').addEventListener('click', function () { step(1); });
+  $('lb').addEventListener('click', function (e) { if (e.target === this) closeLb(); });
+
+  $('lbOpen').addEventListener('click', function () {
+    if (currentIndex >= 0 && visibleItems[currentIndex] && visibleItems[currentIndex].cardId) {
+      t.showCard(visibleItems[currentIndex].cardId);
+    }
+  });
+
+  document.addEventListener('keydown', function (e) {
+    if (!$('lb').classList.contains('open')) return;
+    if (e.key === 'Escape') closeLb();
+    if (e.key === 'ArrowLeft') step(-1);
+    if (e.key === 'ArrowRight') step(1);
+  });
+
+  function capitalize(str) {
+    if (!str) return '';
+    return str.charAt(0).toUpperCase() + str.slice(1);
+  }
+
+  function getMockItems() {
+    return [
+      { f: 'hero-banner-v3.png', card: 'Landing page refresh', l: 'Design', d: 0, url: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=800&auto=format&fit=crop&q=80', color: '#8f7ee7' },
+      { f: 'checkout-error.png', card: 'Fix payment timeout', l: 'Bug', d: 1, url: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&auto=format&fit=crop&q=80', color: '#f5655a' },
+      { f: 'campaign-poster.jpg', card: 'Diwali campaign', l: 'Marketing', d: 2, url: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=80', color: '#e5a21a' },
+      { f: 'api-diagram.png', card: 'API reference update', l: 'Docs', d: 3, url: 'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=800&auto=format&fit=crop&q=80', color: '#2ab38a' },
+      { f: 'onboarding-flow.png', card: 'Onboarding redesign', l: 'Design', d: 4, url: 'https://images.unsplash.com/photo-1581291518857-4e27b48ff24e?w=800&auto=format&fit=crop&q=80', color: '#8f7ee7' },
+      { f: 'social-card.jpg', card: 'Launch announcement', l: 'Marketing', d: 8, url: 'https://images.unsplash.com/photo-1557683316-973673baf926?w=800&auto=format&fit=crop&q=80', color: '#e5a21a' }
+    ];
+  }
+})();

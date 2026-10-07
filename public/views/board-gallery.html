@@ -1,187 +1,131 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Gallery Viewer</title>
-  <link rel="stylesheet" href="../css/global.css">
-  <link rel="stylesheet" href="../css/board-gallery.css">
-  <script src="https://p.trellocdn.com/power-up.min.js"></script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Gallery Viewer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/board-gallery.css">
+<script src="https://p.trellocdn.com/power-up.min.js"></script>
 </head>
 <body>
-  <div class="gv-app-container">
-    <!-- Top Navigation Bar -->
-    <header class="gv-top-navbar">
-      <div class="gv-brand-group">
-        <div class="gv-logo-badge">GV</div>
-        <div class="gv-brand-title">Gallery Viewer</div>
-        <span class="gv-board-title" id="gv-board-name">| Loading board...</span>
-        <span class="gv-active-pill">POWER-UP ACTIVE</span>
-      </div>
+<div class="stage">
+  <div class="modal" role="dialog" aria-label="Board media gallery">
 
-      <div class="gv-nav-controls">
-        <!-- Live Search -->
-        <div class="gv-search-box">
-          <span class="gv-search-icon">🔍</span>
-          <input type="text" id="gv-search-input" placeholder="Search images or cards..." />
+    <!-- Header -->
+    <header class="head">
+      <div class="brand">
+        <div class="logo" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="1.6"/><path d="m21 15-4.5-4.5L6 21"/></svg>
         </div>
-
-        <!-- Action Buttons -->
-        <button id="btn-attach-image" class="gv-btn-primary" title="Attach an image to this board">
-          <span>+</span> Attach Image
-        </button>
-        <button id="btn-open-settings" class="gv-btn-ghost" title="Customize Layout & Settings">
-          <span>⚙</span> Settings
-        </button>
-        <input type="file" id="gv-file-input" accept="image/*" style="display: none;" />
+        <div class="titles">
+          <h1>Gallery Viewer</h1>
+          <p id="boardTitle">Loading board...</p>
+        </div>
       </div>
+      <div class="spacer"></div>
+      <label class="search">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input id="q" type="search" placeholder="Search by file or card name" aria-label="Search images">
+      </label>
+      <button class="btn primary" id="attach">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        Attach image
+      </button>
+      <button class="btn icon" id="settingsBtn" aria-pressed="false" aria-label="Display settings" title="Display settings">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>
+      </button>
+      <input type="file" id="fileInput" accept="image/*" style="display:none;">
     </header>
 
-    <!-- Filter Bar -->
-    <section class="gv-filter-bar">
-      <div class="gv-filter-left">
-        <span class="gv-filter-label">FILTER BY:</span>
-        <select id="gv-filter-list" class="gv-select">
-          <option value="ALL">All Lists</option>
-        </select>
-        <select id="gv-filter-label" class="gv-select">
-          <option value="ALL">All Labels</option>
-        </select>
-      </div>
-      <div class="gv-filter-right">
-        Showing <strong id="gv-showing-count">0</strong> attachments
-      </div>
-    </section>
+    <!-- Filter Toolbar -->
+    <div class="bar">
+      <!-- Lists Segment / Dropdown -->
+      <select id="listSelect" class="chip-select" aria-label="Filter by list">
+        <option value="all">All lists</option>
+      </select>
 
-    <!-- Layout Summary Strip -->
-    <section class="gv-summary-strip">
-      <div class="gv-summary-items">
-        <span id="gv-stat-count">0 images</span>
-        <span class="gv-summary-dot">·</span>
-        <span>Col Width: <strong id="gv-stat-col" class="gv-summary-val">280px</strong></span>
-        <span class="gv-summary-dot">·</span>
-        <span>Gap: <span id="gv-stat-gap-h" class="gv-highlight-green">16px</span> H / <span id="gv-stat-gap-v" class="gv-highlight-yellow">16px</span> V</span>
-        <span class="gv-summary-dot">·</span>
-        <span>Title: <strong id="gv-stat-title-src" class="gv-summary-val">Attachment File</strong></span>
-        <span class="gv-summary-dot">·</span>
-        <span>Mode: <strong id="gv-stat-visibility-mode" class="gv-summary-val">Always Visible</strong></span>
+      <!-- Date Range Filter -->
+      <div class="seg" role="radiogroup" aria-label="Date range" id="dateSeg">
+        <button role="radio" aria-checked="true" data-v="all">All time</button>
+        <button role="radio" aria-checked="false" data-v="today">Today</button>
+        <button role="radio" aria-checked="false" data-v="week">This week</button>
+        <button role="radio" aria-checked="false" data-v="month">This month</button>
       </div>
-    </section>
+      <div class="divider"></div>
+      
+      <!-- Label Filter Chips -->
+      <div class="chips" id="labelChips" aria-label="Filter by label"></div>
+      <button class="reset" id="reset" hidden>Clear filters</button>
+      <div class="spacer"></div>
+      <span class="count" id="count"></span>
+    </div>
 
-    <!-- Main Scrollable Gallery Area -->
-    <main class="gv-main-area">
-      <div class="gv-gallery-scroll-container">
-        <div id="gv-cards-grid" class="gv-cards-grid">
-          <!-- Cards injected dynamically -->
+    <!-- Main Content Area -->
+    <div class="body">
+      <div class="scroll" id="scroll"></div>
+
+      <!-- Settings Drawer -->
+      <aside class="drawer" id="drawer" aria-label="Display settings">
+        <h2>Display settings</h2>
+        <p class="sub">Changes apply to the gallery right away.</p>
+
+        <div class="field">
+          <label for="col">Column width <output id="colOut">260 px</output></label>
+          <input id="col" type="range" min="160" max="420" step="10" value="260">
+        </div>
+        <div class="field">
+          <label for="gx">Horizontal gap <output id="gxOut">16 px</output></label>
+          <input id="gx" type="range" min="0" max="48" step="2" value="16">
+        </div>
+        <div class="field">
+          <label for="gy">Vertical gap <output id="gyOut">16 px</output></label>
+          <input id="gy" type="range" min="0" max="48" step="2" value="16">
         </div>
 
-        <!-- Empty State -->
-        <div id="gv-empty-state" class="gv-empty-state" style="display: none;">
-          <svg width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
-            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-            <circle cx="8.5" cy="8.5" r="1.5"></circle>
-            <polyline points="21 15 16 10 5 21"></polyline>
-          </svg>
-          <p>No matching image attachments found on this board.</p>
-        </div>
-      </div>
-
-      <!-- Slide-Out Settings Panel -->
-      <aside id="gv-settings-drawer" class="gv-settings-drawer">
-        <header class="gv-drawer-header">
-          <div class="gv-drawer-title-group">
-            <div class="gv-drawer-icon">🎛️</div>
-            <div>
-              <div class="gv-drawer-title">Gallery Settings</div>
-              <div class="gv-drawer-subtitle">Customize layout, spacing & labels</div>
+        <div class="group">
+          <div class="field">
+            <div class="lbl">Caption shows</div>
+            <div class="seg full" role="radiogroup" id="titleSeg" aria-label="Caption">
+              <button role="radio" aria-checked="true" data-v="both">Both</button>
+              <button role="radio" aria-checked="false" data-v="card">Card</button>
+              <button role="radio" aria-checked="false" data-v="file">File</button>
+              <button role="radio" aria-checked="false" data-v="none">None</button>
             </div>
           </div>
-          <button id="btn-close-drawer" class="gv-btn-close-drawer">✕</button>
-        </header>
-
-        <div class="gv-drawer-body">
-          <!-- Section 1: Column Width -->
-          <div class="gv-drawer-section">
-            <div class="gv-section-header">
-              <span>▤ COLUMN WIDTH</span>
-              <span id="drawer-val-col-width" class="gv-badge-val">280 px</span>
-            </div>
-            <input type="range" id="drawer-slider-col-width" class="gv-range-slider" min="180" max="480" step="10" value="280" />
-            <div class="gv-preset-grid">
-              <button class="gv-preset-btn" data-col="200">Compact</button>
-              <button class="gv-preset-btn active" data-col="280">Normal</button>
-              <button class="gv-preset-btn" data-col="360">Large</button>
-              <button class="gv-preset-btn" data-col="440">Wide</button>
-            </div>
-          </div>
-
-          <!-- Section 2: Image Spacing -->
-          <div class="gv-drawer-section">
-            <div class="gv-section-header">
-              <span>IMAGE SPACING (GAP)</span>
-              <div style="font-size: 11px; font-weight: normal; text-transform: none;">
-                <span id="btn-gap-flush" style="cursor: pointer; color: var(--accent-cyan);">Flush (0)</span> · 
-                <span id="btn-gap-default" style="cursor: pointer; color: var(--accent-cyan);">Default (16)</span>
-              </div>
-            </div>
-            
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
-              <span style="font-size: 11px; color: var(--text-muted);">↔ Horizontal Spacing</span>
-              <span id="drawer-val-gap-h" class="gv-highlight-green" style="font-size: 11px;">16 px</span>
-            </div>
-            <input type="range" id="drawer-slider-gap-h" class="gv-range-slider green-thumb" min="0" max="40" step="2" value="16" />
-
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
-              <span style="font-size: 11px; color: var(--text-muted);">↕ Vertical Spacing</span>
-              <span id="drawer-val-gap-v" class="gv-highlight-yellow" style="font-size: 11px;">16 px</span>
-            </div>
-            <input type="range" id="drawer-slider-gap-v" class="gv-range-slider yellow-thumb" min="0" max="40" step="2" value="16" />
-          </div>
-
-          <!-- Section 3: Image Name Visibility -->
-          <div class="gv-drawer-section">
-            <div class="gv-section-header">
-              <span>IMAGE NAME VISIBILITY</span>
-            </div>
-            <div class="gv-toggle-group">
-              <button class="gv-toggle-card active" data-mode="always">
-                <span>👁</span> Always visible
-              </button>
-              <button class="gv-toggle-card" data-mode="hover">
-                <span>🚫</span> Only on hover
-              </button>
-            </div>
-            <p id="drawer-visibility-desc" class="gv-help-text">
-              Titles remain fixed as a permanent caption on every thumbnail.
-            </p>
-          </div>
-
-          <!-- Section 4: Displayed Title Source -->
-          <div class="gv-drawer-section">
-            <div class="gv-section-header">
-              <span>DISPLAYED TITLE SOURCE</span>
-            </div>
-            <div class="gv-preset-grid" style="grid-template-columns: repeat(3, 1fr);">
-              <button class="gv-preset-btn active" data-source="attachment">Attachment File</button>
-              <button class="gv-preset-btn" data-source="card">Card Title</button>
-              <button class="gv-preset-btn" data-source="both">Both</button>
+          <div class="field">
+            <div class="lbl">Show captions</div>
+            <div class="seg full" role="radiogroup" id="revealSeg" aria-label="When to show captions">
+              <button role="radio" aria-checked="false" data-v="hover">On hover</button>
+              <button role="radio" aria-checked="true" data-v="always">Always</button>
             </div>
           </div>
         </div>
-
-        <footer class="gv-drawer-footer">
-          <button id="btn-drawer-reset" class="gv-btn-reset">
-            <span>↺</span> Reset Defaults
-          </button>
-          <button id="btn-drawer-done" class="gv-btn-done">
-            Done
-          </button>
-        </footer>
+        <button class="btn" id="defaults" style="width:100%;justify-content:center">Restore defaults</button>
       </aside>
-    </main>
-  </div>
 
-  <script src="../js/trello-api.js"></script>
-  <script src="../js/board-gallery.js"></script>
+      <!-- Lightbox Preview Modal -->
+      <div class="lb" id="lb" role="dialog" aria-label="Image preview">
+        <button class="lbclose" id="lbClose" aria-label="Close preview"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+        <button class="nav" id="prev" aria-label="Previous image" style="grid-column:1;grid-row:1"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="m15 5-7 7 7 7"/></svg></button>
+        <div class="stagepic" id="lbPic"></div>
+        <button class="nav" id="next" aria-label="Next image" style="grid-column:3;grid-row:1"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="m9 5 7 7-7 7"/></svg></button>
+        <div class="info">
+          <div>
+            <h3 id="lbTitle"></h3>
+            <p id="lbMeta"></p>
+          </div>
+          <div class="spacer"></div>
+          <button class="btn" id="lbOpen">Open card</button>
+          <a class="btn primary" id="lbDl" download target="_blank">Download</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="../js/trello-api.js"></script>
+<script src="../js/board-gallery.js"></script>
 </body>
 </html>
