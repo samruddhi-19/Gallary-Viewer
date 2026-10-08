@@ -9,11 +9,18 @@ const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bm
  */
 function isImageAttachment(attachment) {
   if (!attachment) return false;
-  if (attachment.mimeType && attachment.mimeType.startsWith('image/')) {
+  if (attachment.mimeType && attachment.mimeType.toLowerCase().startsWith('image/')) {
     return true;
   }
-  const url = (attachment.url || attachment.name || '').toLowerCase();
-  return IMAGE_EXTENSIONS.some(ext => url.endsWith(ext) || url.includes(ext + '?'));
+  const name = (attachment.name || '').toLowerCase();
+  const url = (attachment.url || '').toLowerCase();
+  return IMAGE_EXTENSIONS.some(ext => 
+    name.endsWith(ext) || 
+    url.endsWith(ext) || 
+    url.includes(ext + '?') || 
+    url.includes(ext + '#') || 
+    url.includes(ext + '&')
+  );
 }
 
 /**

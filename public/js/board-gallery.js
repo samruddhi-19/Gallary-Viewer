@@ -49,8 +49,10 @@
   function getDaysAgo(dateString) {
     if (!dateString) return 0;
     const date = new Date(dateString);
+    if (isNaN(date.getTime())) return 0;
     const now = new Date();
-    const diffTime = Math.abs(now - date);
+    const diffTime = now.getTime() - date.getTime();
+    if (diffTime <= 0) return 0;
     return Math.floor(diffTime / (1000 * 60 * 60 * 24));
   }
 
@@ -95,8 +97,6 @@
     availableLabels = {};
 
     (cards || []).forEach(c => {
-      const days = getDaysAgo(c.dateLastActivity);
-      
       // Determine primary label and all card labels
       let primaryLabel = 'General';
       let primaryColor = LABEL_COLORS.default;
@@ -114,8 +114,11 @@
         });
       }
 
-      if (c.attachments && c.attachments.length > 0) {
-        c.attachments.filter(window.GalleryAPI.isImageAttachment).forEach(att => {
+      const imgAttachments = (c.attachments || []).filter(window.GalleryAPI.isImageAttachment);
+
+      if (imgAttachments.length > 0) {
+        imgAttachments.forEach(att => {
+          const days = getDaysAgo(att.date || c.dateLastActivity);
           allBoardItems.push({
             id: att.id,
             f: att.name || 'image_attachment.png',
@@ -125,13 +128,14 @@
             listId: c.idList,
             listName: listMap[c.idList] || 'List',
             l: primaryLabel,
-            labels: cardLabelsList,
+            labels: cardLabelsList.length > 0 ? cardLabelsList : [primaryLabel],
             color: primaryColor,
             d: days,
             date: att.date || c.dateLastActivity
           });
         });
       } else if (c.cover && c.cover.sharedSourceUrl) {
+        const days = getDaysAgo(c.dateLastActivity);
         allBoardItems.push({
           id: 'cover-' + c.id,
           f: c.name + ' (Cover)',
@@ -141,7 +145,7 @@
           listId: c.idList,
           listName: listMap[c.idList] || 'List',
           l: primaryLabel,
-          labels: cardLabelsList,
+          labels: cardLabelsList.length > 0 ? cardLabelsList : [primaryLabel],
           color: primaryColor,
           d: days,
           date: c.dateLastActivity
@@ -149,9 +153,16 @@
       }
     });
 
-    // If completely empty board, add helpful demo cards so design looks alive
+    // If completely empty board or fallback mode, add helpful demo cards
     if (allBoardItems.length === 0) {
       allBoardItems = getMockItems();
+      if (!allLists || allLists.length === 0) {
+        allLists = [
+          { id: 'list-1', name: 'In Progress' },
+          { id: 'list-2', name: 'Done' },
+          { id: 'list-3', name: 'Backlog' }
+        ];
+      }
       availableLabels = {
         Design: { c: '#8f7ee7' },
         Bug: { c: '#f5655a' },
@@ -181,14 +192,20 @@
       if (it.labels && it.labels.length > 0) {
         it.labels.forEach(lb => {
           labelCounts[lb] = (labelCounts[lb] || 0) + 1;
+          if (!availableLabels[lb]) {
+            availableLabels[lb] = { c: it.color || LABEL_COLORS.default };
+          }
         });
       } else if (it.l) {
         labelCounts[it.l] = (labelCounts[it.l] || 0) + 1;
+        if (!availableLabels[it.l]) {
+          availableLabels[it.l] = { c: it.color || LABEL_COLORS.default };
+        }
       }
     });
 
     let html = '<option value="all">All labels</option>';
-    Object.keys(availableLabels).forEach(k => {
+    Object.keys(labelCounts).sort().forEach(k => {
       const cnt = labelCounts[k] || 0;
       html += `<option value="${esc(k)}" ${state.label === k ? 'selected' : ''}>${esc(k)} (${cnt})</option>`;
     });
@@ -205,7 +222,16 @@
     if (state.date === 'week' && it.d > 7) return false;
     if (state.date === 'month' && it.d > 30) return false;
     const q = state.q.trim().toLowerCase();
-    if (q && (it.f + ' ' + it.card + ' ' + (it.listName || '')).toLowerCase().indexOf(q) < 0) return false;
+    if (q) {
+      const target = [
+        it.f,
+        it.card,
+        it.listName,
+        ...(it.labels || []),
+        it.l
+      ].filter(Boolean).join(' ').toLowerCase();
+      if (target.indexOf(q) < 0) return false;
+    }
     return true;
   }
 
@@ -440,12 +466,12 @@
 
   function getMockItems() {
     return [
-      { f: 'hero-banner-v3.png', card: 'Landing page refresh', l: 'Design', labels: ['Design'], d: 0, url: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=800&auto=format&fit=crop&q=80', color: '#8f7ee7' },
-      { f: 'checkout-error.png', card: 'Fix payment timeout', l: 'Bug', labels: ['Bug'], d: 1, url: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&auto=format&fit=crop&q=80', color: '#f5655a' },
-      { f: 'campaign-poster.jpg', card: 'Diwali campaign', l: 'Marketing', labels: ['Marketing'], d: 2, url: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=80', color: '#e5a21a' },
-      { f: 'api-diagram.png', card: 'API reference update', l: 'Docs', labels: ['Docs'], d: 3, url: 'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=800&auto=format&fit=crop&q=80', color: '#2ab38a' },
-      { f: 'onboarding-flow.png', card: 'Onboarding redesign', l: 'Design', labels: ['Design'], d: 4, url: 'https://images.unsplash.com/photo-1581291518857-4e27b48ff24e?w=800&auto=format&fit=crop&q=80', color: '#8f7ee7' },
-      { f: 'social-card.jpg', card: 'Launch announcement', l: 'Marketing', labels: ['Marketing'], d: 8, url: 'https://images.unsplash.com/photo-1557683316-973673baf926?w=800&auto=format&fit=crop&q=80', color: '#e5a21a' }
+      { f: 'hero-banner-v3.png', card: 'Landing page refresh', l: 'Design', labels: ['Design'], listId: 'list-1', listName: 'In Progress', d: 0, url: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=800&auto=format&fit=crop&q=80', color: '#8f7ee7' },
+      { f: 'checkout-error.png', card: 'Fix payment timeout', l: 'Bug', labels: ['Bug'], listId: 'list-1', listName: 'In Progress', d: 1, url: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&auto=format&fit=crop&q=80', color: '#f5655a' },
+      { f: 'campaign-poster.jpg', card: 'Diwali campaign', l: 'Marketing', labels: ['Marketing'], listId: 'list-2', listName: 'Done', d: 2, url: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=80', color: '#e5a21a' },
+      { f: 'api-diagram.png', card: 'API reference update', l: 'Docs', labels: ['Docs'], listId: 'list-3', listName: 'Backlog', d: 3, url: 'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=800&auto=format&fit=crop&q=80', color: '#2ab38a' },
+      { f: 'onboarding-flow.png', card: 'Onboarding redesign', l: 'Design', labels: ['Design'], listId: 'list-1', listName: 'In Progress', d: 4, url: 'https://images.unsplash.com/photo-1581291518857-4e27b48ff24e?w=800&auto=format&fit=crop&q=80', color: '#8f7ee7' },
+      { f: 'social-card.jpg', card: 'Launch announcement', l: 'Marketing', labels: ['Marketing'], listId: 'list-2', listName: 'Done', d: 8, url: 'https://images.unsplash.com/photo-1557683316-973673baf926?w=800&auto=format&fit=crop&q=80', color: '#e5a21a' }
     ];
   }
 })();
