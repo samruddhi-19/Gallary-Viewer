@@ -188,9 +188,9 @@ btnDownload.addEventListener('click', async () => {
         await window.GalleryAPI.downloadImage(item.url, item.name || 'trello-image');
       } else {
         const link = document.createElement('a');
+        link.style.display = 'none';
         link.href = item.url;
         link.download = item.name || 'trello-image';
-        link.target = '_blank';
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);

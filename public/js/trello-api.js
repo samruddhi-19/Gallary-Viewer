@@ -57,7 +57,7 @@ function getImageAttachmentsFromCard(card) {
 async function downloadImage(url, filename = 'image') {
   if (!url) return false;
 
-  // Clean filename and ensure extension
+  // Clean filename and ensure valid image extension
   let safeFilename = (filename || 'image').trim();
   if (!/\.[a-zA-Z0-9]{2,5}$/.test(safeFilename)) {
     const match = url.match(/\.([a-zA-Z0-9]{3,4})(?:\?|#|$)/i);
@@ -78,7 +78,40 @@ async function downloadImage(url, filename = 'image') {
     }, 2000);
   }
 
-  // Strategy 1: Direct fetch with CORS to create a Blob
+  // Strategy 0: Handle Data URLs directly
+  if (url.startsWith('data:')) {
+    try {
+      const parts = url.split(',');
+      const mimeMatch = parts[0].match(/:(.*?);/);
+      const mime = mimeMatch ? mimeMatch[1] : 'image/png';
+      const bstr = atob(parts[1]);
+      let n = bstr.length;
+      const u8arr = new Uint8Array(n);
+      while (n--) {
+        u8arr[n] = bstr.charCodeAt(n);
+      }
+      const blob = new Blob([u8arr], { type: mime });
+      triggerBlobDownload(blob, safeFilename);
+      return true;
+    } catch (e) {
+      console.warn('Data URL parsing failed:', e);
+    }
+  }
+
+  // Strategy 1: Server proxy download (guarantees attachment header & bypasses browser CORS)
+  try {
+    const proxyUrl = `${window.location.origin}/api/download?url=${encodeURIComponent(url)}&filename=${encodeURIComponent(safeFilename)}`;
+    const response = await fetch(proxyUrl);
+    if (response.ok) {
+      const blob = await response.blob();
+      triggerBlobDownload(blob, safeFilename);
+      return true;
+    }
+  } catch (e) {
+    console.warn('Server proxy fetch failed, trying direct fetch / canvas:', e);
+  }
+
+  // Strategy 2: Direct fetch with CORS
   try {
     const response = await fetch(url, { mode: 'cors' });
     if (response.ok) {
@@ -90,7 +123,7 @@ async function downloadImage(url, filename = 'image') {
     console.warn('Direct fetch download failed, trying canvas fallback:', e);
   }
 
-  // Strategy 2: HTML5 Canvas Blob fallback
+  // Strategy 3: HTML5 Canvas Blob conversion
   try {
     const blob = await new Promise((resolve, reject) => {
       const img = new Image();
@@ -122,27 +155,28 @@ async function downloadImage(url, filename = 'image') {
     triggerBlobDownload(blob, safeFilename);
     return true;
   } catch (e) {
-    console.warn('Canvas download fallback failed, trying proxy or fallback link:', e);
+    console.warn('Canvas download fallback failed:', e);
   }
 
-  // Strategy 3: Server proxy endpoint (if hosted with backend)
+  // Strategy 4: Silent iframe trigger to proxy URL (triggers download dialog without opening new tab)
   try {
-    const proxyUrl = `/api/download?url=${encodeURIComponent(url)}&filename=${encodeURIComponent(safeFilename)}`;
-    const response = await fetch(proxyUrl);
-    if (response.ok) {
-      const blob = await response.blob();
-      triggerBlobDownload(blob, safeFilename);
-      return true;
-    }
+    const proxyUrl = `${window.location.origin}/api/download?url=${encodeURIComponent(url)}&filename=${encodeURIComponent(safeFilename)}`;
+    const iframe = document.createElement('iframe');
+    iframe.style.display = 'none';
+    iframe.src = proxyUrl;
+    document.body.appendChild(iframe);
+    setTimeout(() => {
+      document.body.removeChild(iframe);
+    }, 10000);
+    return true;
   } catch (e) {
-    console.warn('Server proxy download failed:', e);
+    console.warn('Iframe download trigger failed:', e);
   }
 
-  // Strategy 4: Fallback - standard download anchor / open
+  // Strategy 5: Direct anchor click (no target="_blank" to prevent opening in a new tab)
   const fallbackLink = document.createElement('a');
+  fallbackLink.style.display = 'none';
   fallbackLink.href = url;
-  fallbackLink.target = '_blank';
-  fallbackLink.rel = 'noopener noreferrer';
   fallbackLink.download = safeFilename;
   document.body.appendChild(fallbackLink);
   fallbackLink.click();

@@ -484,9 +484,9 @@
         await window.GalleryAPI.downloadImage(it.url, it.f || 'image');
       } else {
         const link = document.createElement('a');
+        link.style.display = 'none';
         link.href = it.url;
         link.download = it.f || 'image';
-        link.target = '_blank';
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -513,7 +513,7 @@
 
   function getMockItems() {
     return [
-      { f: 'hero-banner-v3.png', card: 'Landing page refresh', l: 'Design', labels: ['Design'], listId: 'list-1', listName: 'In Progress', d: 0, url: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=800&auto=format&fit=crop&q=80', color: '#8f7ee7' },
+      { f: 'hero-banner-v3.png', card: 'Landing page refresh', l: 'Design', labels: ['Design'], listId: 'list-1', listName: 'In Progress', d: 0, url: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800', color: '#8f7ee7' },
       { f: 'checkout-error.png', card: 'Fix payment timeout', l: 'Bug', labels: ['Bug'], listId: 'list-1', listName: 'In Progress', d: 1, url: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&auto=format&fit=crop&q=80', color: '#f5655a' },
       { f: 'campaign-poster.jpg', card: 'Diwali campaign', l: 'Marketing', labels: ['Marketing'], listId: 'list-2', listName: 'Done', d: 2, url: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=80', color: '#e5a21a' },
       { f: 'api-diagram.png', card: 'API reference update', l: 'Docs', labels: ['Docs'], listId: 'list-3', listName: 'Backlog', d: 3, url: 'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=800&auto=format&fit=crop&q=80', color: '#2ab38a' },
