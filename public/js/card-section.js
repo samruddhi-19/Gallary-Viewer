@@ -23,6 +23,7 @@ function openGalleryModal() {
   return t.modal({
     title: 'Image Gallery',
     url: './gallery-modal.html',
+    accentColor: '#1d2125',
     fullscreen: true
   });
 }

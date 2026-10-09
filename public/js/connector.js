@@ -13,6 +13,7 @@ window.TrelloPowerUp.initialize({
           return t.modal({
             title: 'Image Gallery',
             url: './views/gallery-modal.html',
+            accentColor: '#1d2125',
             fullscreen: true,
             actions: [
               {
@@ -38,6 +39,7 @@ window.TrelloPowerUp.initialize({
           return t.modal({
             title: 'Board Media Gallery',
             url: './views/board-gallery.html',
+            accentColor: '#1d2125',
             fullscreen: true
           });
         }
@@ -80,6 +82,7 @@ window.TrelloPowerUp.initialize({
               return t.modal({
                 title: 'Image Gallery',
                 url: './views/gallery-modal.html',
+                accentColor: '#1d2125',
                 fullscreen: true
               });
             }
