@@ -21,6 +21,34 @@ app.use((req, res, next) => {
 // Serve static files from public directory
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Proxy download endpoint for cross-origin images
+app.get('/api/download', async (req, res) => {
+  const fileUrl = req.query.url;
+  const fileName = req.query.filename || 'downloaded-image.png';
+
+  if (!fileUrl) {
+    return res.status(400).send('Missing url parameter');
+  }
+
+  try {
+    const response = await fetch(fileUrl);
+    if (!response.ok) {
+      return res.status(response.status).send('Failed to fetch image');
+    }
+
+    const contentType = response.headers.get('content-type') || 'application/octet-stream';
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(fileName)}"`);
+
+    const arrayBuffer = await response.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    res.send(buffer);
+  } catch (error) {
+    console.error('Error proxying download:', error);
+    res.status(500).send('Error downloading file');
+  }
+});
+
 // Fallback route
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));

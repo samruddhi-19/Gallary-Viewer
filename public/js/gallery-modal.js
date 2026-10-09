@@ -176,15 +176,32 @@ btnSlideshow.addEventListener('click', () => {
   }
 });
 
-btnDownload.addEventListener('click', () => {
+btnDownload.addEventListener('click', async () => {
   if (images[currentIndex]) {
-    const link = document.createElement('a');
-    link.href = images[currentIndex].url;
-    link.download = images[currentIndex].name || 'trello-image';
-    link.target = '_blank';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const item = images[currentIndex];
+    const prevText = btnDownload.textContent;
+    btnDownload.disabled = true;
+    btnDownload.textContent = '⏳';
+    btnDownload.title = 'Downloading...';
+    try {
+      if (window.GalleryAPI && window.GalleryAPI.downloadImage) {
+        await window.GalleryAPI.downloadImage(item.url, item.name || 'trello-image');
+      } else {
+        const link = document.createElement('a');
+        link.href = item.url;
+        link.download = item.name || 'trello-image';
+        link.target = '_blank';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+    } catch (err) {
+      console.error('Download error:', err);
+    } finally {
+      btnDownload.disabled = false;
+      btnDownload.textContent = prevText;
+      btnDownload.title = 'Download Image';
+    }
   }
 });
 
