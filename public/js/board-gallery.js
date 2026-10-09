@@ -94,8 +94,8 @@
       populateLabelDropdown();
       syncSettings();
       render();
-    }).catch(function (err) {
-      console.error('Error rendering gallery data:', err);
+    }).catch(function () {
+      // Fail gracefully if board data cannot be fetched
     });
   });
 

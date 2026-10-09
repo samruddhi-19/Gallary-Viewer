@@ -44,7 +44,7 @@ btnAuthorize.addEventListener('click', function () {
     return t.closePopup();
   })
   .catch(TrelloPowerUp.restApiError.AuthDeniedError, function () {
-    console.log('User cancelled authorization.');
+    // User cancelled authorization
   });
 });
 
