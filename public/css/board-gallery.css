@@ -112,6 +112,7 @@ button {
   background-color: var(--surface);
   border-bottom: 1px solid var(--line);
   flex-shrink: 0;
+  color: #ffffff;
 }
 
 .brand {
@@ -127,7 +128,7 @@ button {
   border-radius: 6px;
   flex-shrink: 0;
   background: var(--accent);
-  color: var(--accent-ink);
+  color: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -187,11 +188,12 @@ button {
 }
 
 .search input::placeholder {
-  color: rgba(255, 255, 255, 0.65);
+  color: rgba(255, 255, 255, 0.7);
 }
 
 .search svg {
   color: #ffffff;
+  stroke: #ffffff;
   flex-shrink: 0;
 }
 
@@ -206,35 +208,42 @@ button {
   gap: 6px;
   font-weight: 600;
   font-size: 12.5px;
-  color: var(--text-strong);
+  color: #ffffff;
   transition: all 0.15s ease;
 }
 
 .btn:hover {
   background: var(--raised-hover);
+  color: #ffffff;
 }
 
 .btn.primary {
   background: var(--accent);
   border-color: var(--accent);
-  color: var(--accent-ink);
+  color: #ffffff;
 }
 
 .btn.primary:hover {
   background: var(--accent-hover);
   border-color: var(--accent-hover);
+  color: #ffffff;
 }
 
 .btn.icon {
   width: 32px;
   padding: 0;
   justify-content: center;
+  color: #ffffff;
+}
+
+.btn.icon svg {
+  stroke: #ffffff;
 }
 
 .btn[aria-pressed="true"] {
   background: var(--accent-soft);
   border-color: var(--accent);
-  color: var(--accent);
+  color: #ffffff;
 }
 
 /* Secondary Filter Toolbar */
@@ -247,6 +256,7 @@ button {
   border-bottom: 1px solid var(--line);
   flex-shrink: 0;
   flex-wrap: wrap;
+  color: #ffffff;
 }
 
 .chip-select {
@@ -257,10 +267,15 @@ button {
   background: var(--surface);
   font-size: 12px;
   font-weight: 500;
-  color: var(--text-strong);
+  color: #ffffff;
   outline: none;
   cursor: pointer;
   transition: border-color 0.15s ease;
+}
+
+.chip-select option {
+  background-color: var(--surface);
+  color: #ffffff;
 }
 
 .chip-select:focus {
@@ -280,33 +295,40 @@ button {
   background: none;
   padding: 3px 9px;
   border-radius: 4px;
-  color: var(--muted);
+  color: #ffffff;
+  opacity: 0.8;
   font-weight: 500;
   font-size: 12px;
+  transition: opacity 0.15s ease, background-color 0.15s ease;
 }
 
 .seg button:hover {
-  color: var(--text-strong);
+  color: #ffffff;
+  opacity: 1;
 }
 
 .seg button[aria-checked="true"] {
   background: var(--raised-hover);
-  color: var(--text-strong);
+  color: #ffffff;
   font-weight: 600;
+  opacity: 1;
 }
 
 .reset {
   border: 0;
   background: none;
-  color: var(--accent);
+  color: #ffffff;
   font-weight: 600;
   font-size: 12px;
   padding: 4px 8px;
   border-radius: 4px;
+  text-decoration: underline;
+  opacity: 0.9;
+  cursor: pointer;
 }
 
 .reset:hover {
-  text-decoration: underline;
+  opacity: 1;
 }
 
 .reset[hidden] {
@@ -320,13 +342,15 @@ button {
 }
 
 .count {
-  color: var(--muted);
+  color: #ffffff;
   font-size: 12px;
+  opacity: 0.9;
 }
 
 .count b {
-  color: var(--text-strong);
+  color: #ffffff;
   font-weight: 600;
+  opacity: 1;
 }
 
 /* Main Body & Gallery Grid */
