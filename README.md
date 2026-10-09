@@ -49,7 +49,6 @@ Gallary Viewer/
   - Smooth Zoom-in / Zoom-out controls.
   - Automatic Slideshow mode.
   - Toggle between Single Lightbox and Multi-column Masonry Grid view.
-  - Direct Image Download.
 - **Custom Settings & OAuth**:
   - Configurable default view mode, slideshow speed, and autoplay.
   - Built-in Trello Token Authorization flow (`authorization-status` & `show-authorization`) for private board/card attachments.

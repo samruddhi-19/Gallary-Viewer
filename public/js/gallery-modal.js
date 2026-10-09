@@ -23,7 +23,6 @@ const btnToggleGrid = document.getElementById('btn-toggle-grid');
 const btnZoomIn = document.getElementById('btn-zoom-in');
 const btnZoomOut = document.getElementById('btn-zoom-out');
 const btnSlideshow = document.getElementById('btn-slideshow');
-const btnDownload = document.getElementById('btn-download');
 const btnClose = document.getElementById('btn-close');
 
 // Initialize
@@ -173,35 +172,6 @@ btnSlideshow.addEventListener('click', () => {
     stopSlideshow();
   } else {
     startSlideshow();
-  }
-});
-
-btnDownload.addEventListener('click', async () => {
-  if (images[currentIndex]) {
-    const item = images[currentIndex];
-    const prevText = btnDownload.textContent;
-    btnDownload.disabled = true;
-    btnDownload.textContent = '⏳';
-    btnDownload.title = 'Downloading...';
-    try {
-      if (window.GalleryAPI && window.GalleryAPI.downloadImage) {
-        await window.GalleryAPI.downloadImage(item.url, item.name || 'trello-image');
-      } else {
-        const link = document.createElement('a');
-        link.style.display = 'none';
-        link.href = item.url;
-        link.download = item.name || 'trello-image';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      }
-    } catch (err) {
-      console.error('Download error:', err);
-    } finally {
-      btnDownload.disabled = false;
-      btnDownload.textContent = prevText;
-      btnDownload.title = 'Download Image';
-    }
   }
 });
 

@@ -336,10 +336,6 @@
     $('lbTitle').textContent = it.card;
     $('lbMeta').textContent = `${it.f} · ${it.l} · ${formatTimeAgo(it.d)}`;
     
-    // Set download button title
-    const dlBtn = $('lbDl');
-    dlBtn.title = `Download ${it.f}`;
-
     $('lb').classList.add('open');
     $('lbClose').focus();
   }
@@ -468,34 +464,6 @@
   $('lbOpen').addEventListener('click', function () {
     if (currentIndex >= 0 && visibleItems[currentIndex] && visibleItems[currentIndex].cardId) {
       t.showCard(visibleItems[currentIndex].cardId);
-    }
-  });
-
-  $('lbDl').addEventListener('click', async function (e) {
-    e.preventDefault();
-    if (currentIndex < 0 || !visibleItems[currentIndex]) return;
-    const it = visibleItems[currentIndex];
-    const dlBtn = $('lbDl');
-    const originalText = dlBtn.textContent;
-    dlBtn.textContent = 'Downloading...';
-    dlBtn.disabled = true;
-    try {
-      if (window.GalleryAPI && window.GalleryAPI.downloadImage) {
-        await window.GalleryAPI.downloadImage(it.url, it.f || 'image');
-      } else {
-        const link = document.createElement('a');
-        link.style.display = 'none';
-        link.href = it.url;
-        link.download = it.f || 'image';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      }
-    } catch (err) {
-      console.error('Download error:', err);
-    } finally {
-      dlBtn.textContent = originalText;
-      dlBtn.disabled = false;
     }
   });
 
