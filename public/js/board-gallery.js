@@ -70,8 +70,18 @@
       t.cards('id', 'name', 'idList', 'labels', 'attachments', 'badges', 'cover', 'dateLastActivity'),
       t.get('member', 'private', 'galleryDisplaySettings')
     ]).then(function ([board, lists, cards, savedSettings]) {
+      // Ensure filter state always defaults to show all images when opened
+      state.date = 'all';
+      state.list = 'all';
+      state.label = 'all';
+      state.q = '';
+
       if (savedSettings) {
-        Object.assign(state, savedSettings);
+        if (typeof savedSettings.col === 'number') state.col = savedSettings.col;
+        if (typeof savedSettings.gx === 'number') state.gx = savedSettings.gx;
+        if (typeof savedSettings.gy === 'number') state.gy = savedSettings.gy;
+        if (savedSettings.title) state.title = savedSettings.title;
+        if (savedSettings.reveal) state.reveal = savedSettings.reveal;
       }
 
       if (board && board.name) {
@@ -178,12 +188,14 @@
       if (it.listId) listCounts[it.listId] = (listCounts[it.listId] || 0) + 1;
     });
 
-    let html = '<option value="all">All lists</option>';
+    let html = `<option value="all" ${state.list === 'all' ? 'selected' : ''}>All lists</option>`;
     allLists.forEach(l => {
       const cnt = listCounts[l.id] || 0;
       html += `<option value="${l.id}" ${state.list === l.id ? 'selected' : ''}>${esc(l.name)} (${cnt})</option>`;
     });
-    $('listSelect').innerHTML = html;
+    const sel = $('listSelect');
+    sel.innerHTML = html;
+    sel.value = state.list;
   }
 
   function populateLabelDropdown() {
@@ -204,12 +216,14 @@
       }
     });
 
-    let html = '<option value="all">All labels</option>';
+    let html = `<option value="all" ${state.label === 'all' ? 'selected' : ''}>All labels</option>`;
     Object.keys(labelCounts).sort().forEach(k => {
       const cnt = labelCounts[k] || 0;
       html += `<option value="${esc(k)}" ${state.label === k ? 'selected' : ''}>${esc(k)} (${cnt})</option>`;
     });
-    $('labelSelect').innerHTML = html;
+    const sel = $('labelSelect');
+    sel.innerHTML = html;
+    sel.value = state.label;
   }
 
   function match(it) {
@@ -292,7 +306,13 @@
     g.style.setProperty('--gy', state.gy + 'px');
     g.dataset.title = state.title;
     g.dataset.reveal = state.reveal;
-    t.set('member', 'private', 'galleryDisplaySettings', state);
+    t.set('member', 'private', 'galleryDisplaySettings', {
+      col: state.col,
+      gx: state.gx,
+      gy: state.gy,
+      title: state.title,
+      reveal: state.reveal
+    });
   }
 
   function setSeg(id, v) {
